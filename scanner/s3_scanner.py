@@ -4,26 +4,24 @@ s3 = boto3.client('s3')
 
 def check_public_buckets():
     findings = []
-
     buckets = s3.list_buckets()['Buckets']
 
     for bucket in buckets:
         bucket_name = bucket['Name']
 
+        # Check Bucket Policy
         try:
-            acl = s3.get_bucket_acl(Bucket=bucket_name)
+            policy = s3.get_bucket_policy(Bucket=bucket_name)
+            policy_json = json.loads(policy['Policy'])
 
-            for grant in acl['Grants']:
-                grantee = grant.get('Grantee', {})
-
-                if grantee.get('URI') == "http://acs.amazonaws.com/groups/global/AllUsers":
+            for statement in policy_json.get("Statement", []):
+                if statement.get("Principal") == "*" and statement.get("Effect") == "Allow":
                     findings.append({
                         "resource": bucket_name,
-                        "issue": "Bucket is publicly accessible",
+                        "issue": "Bucket has public bucket policy",
                         "severity": "HIGH"
                     })
-
-        except Exception as e:
-            continue
+        except:
+            pass
 
     return findings
