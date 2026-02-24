@@ -31,3 +31,5 @@ python -m awscli s3api delete-bucket --bucket your-bucket-name     to delete an 
 python -m awscli s3api list-objects --bucket your-bucket-name     to list the objects in an S3 bucket using the S3 API.
 
 
+// Run your Python script that uses boto3 to interact with AWS services
+python main.py

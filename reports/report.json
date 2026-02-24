@@ -1,0 +1,7 @@
+[
+    {
+        "user": "scanner-user",
+        "issue": "User does not have MFA enabled",
+        "severity": "MEDIUM"
+    }
+]
