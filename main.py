@@ -1,12 +1,20 @@
-import boto3
+from scanner.iam_scanner import check_admin_policies, check_mfa_enabled
 
-def list_iam_users():
-    iam = boto3.client('iam')
-    response = iam.list_users()
+def run_iam_scan():
+    findings = []
 
-    print("IAM Users in this account:")
-    for user in response['Users']:
-        print(f"- {user['UserName']}")
+    findings.extend(check_admin_policies())
+    findings.extend(check_mfa_enabled())
+
+    if not findings:
+        print("No IAM security issues found.")
+    else:
+        print("IAM Security Findings:")
+        for f in findings:
+            print(f"- User: {f['user']}")
+            print(f"  Issue: {f['issue']}")
+            print(f"  Severity: {f['severity']}")
+            print()
 
 if __name__ == "__main__":
-    list_iam_users()
+    run_iam_scan()
