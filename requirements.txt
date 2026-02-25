@@ -33,3 +33,14 @@ python -m awscli s3api list-objects --bucket your-bucket-name     to list the ob
 
 // Run your Python script that uses boto3 to interact with AWS services
 python main.py
+
+
+// Install dependencies for your Python project  for dockerization  If uvicorn is missing → container will fail.
+
+fastapi
+uvicorn
+boto3
+botocore
+
+
+   
