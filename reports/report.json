@@ -1,11 +1,10 @@
 {
     "account_id": "921804430571",
     "region": "eu-north-1",
-    "scan_time": "2026-02-25T16:04:32.849393+00:00",
+    "scan_time": "2026-02-25T17:47:19.399028+00:00",
     "summary": {
-        "CRITICAL": 1,
         "HIGH": 1,
-        "MEDIUM": 0
+        "CRITICAL": 1
     },
     "findings": [
         {
