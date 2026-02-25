@@ -21,16 +21,11 @@ def run_scan():
     findings.extend(scan_s3())
     findings.extend(scan_ec2())
 
-    summary = {
-        "CRITICAL": 0,
-        "HIGH": 0,
-        "MEDIUM": 0
-    }
+    summary = {}
 
     for f in findings:
-        severity = f.get("severity")
-        if severity in summary:
-            summary[severity] += 1
+        severity = f.get("severity", "UNKNOWN")
+        summary[severity] = summary.get(severity, 0) + 1
 
     report = {
         "account_id": get_account_id(),
@@ -54,6 +49,7 @@ def run_scan():
 
     print("\nReport saved to reports/report.json")
 
-
-if __name__ == "__main__":
-    run_scan()
+    return report   # 🔥 Important for API usage later
+    
+if __name__ == "__main__":   
+    run_scan()    
