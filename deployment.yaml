@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aws-scanner-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aws-scanner
+  template:
+    metadata:
+      labels:
+        app: aws-scanner
+    spec:
+      containers:
+      - name: aws-scanner
+        image: aws-scanner:1.0
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8000
+        env:
+        - name: AWS_ACCESS_KEY_ID
+          value: "YOUR_KEY"
+        - name: AWS_SECRET_ACCESS_KEY
+          value: "YOUR_SECRET"
+        - name: AWS_DEFAULT_REGION
+          value: "eu-north-1"
