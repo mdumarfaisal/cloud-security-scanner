@@ -182,7 +182,8 @@ Resume-ready cloud security tool
 👨‍💻 Author
 
 Md Umar Faisal
-B.Tech – Cloud Computing
+B.Tech – Computer Science and Engineering
+Cloud Computing
 Cloud Security Project
 
 📜 License
