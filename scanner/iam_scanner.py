@@ -1,43 +1,54 @@
 import boto3
+from botocore.exceptions import ClientError
 
-iam = boto3.client('iam')
+iam = boto3.client("iam")
 
-def check_admin_policies():
+
+def create_finding(service, resource, issue, severity):
+    return {
+        "service": service,
+        "resource": resource,
+        "issue": issue,
+        "severity": severity
+    }
+
+
+def scan_iam():
     findings = []
 
-    users = iam.list_users()['Users']
+    try:
+        paginator = iam.get_paginator("list_users")
 
-    for user in users:
-        username = user['UserName']
+        for page in paginator.paginate():
+            for user in page["Users"]:
+                username = user["UserName"]
 
-        attached_policies = iam.list_attached_user_policies(UserName=username)
+                # 🔴 Check AdministratorAccess
+                attached = iam.list_attached_user_policies(UserName=username)
+                for policy in attached["AttachedPolicies"]:
+                    if policy["PolicyName"] == "AdministratorAccess":
+                        findings.append(
+                            create_finding(
+                                "IAM",
+                                username,
+                                "User has AdministratorAccess policy",
+                                "CRITICAL"
+                            )
+                        )
 
-        for policy in attached_policies['AttachedPolicies']:
-            if policy['PolicyName'] == "AdministratorAccess":
-                findings.append({
-                    "user": username,
-                    "issue": "User has AdministratorAccess policy",
-                    "severity": "HIGH"
-                })
+                # 🟠 Check MFA
+                mfa = iam.list_mfa_devices(UserName=username)
+                if not mfa["MFADevices"]:
+                    findings.append(
+                        create_finding(
+                            "IAM",
+                            username,
+                            "User does not have MFA enabled",
+                            "HIGH"
+                        )
+                    )
 
-    return findings
-
-
-def check_mfa_enabled():
-    findings = []
-
-    users = iam.list_users()['Users']
-
-    for user in users:
-        username = user['UserName']
-
-        mfa_devices = iam.list_mfa_devices(UserName=username)
-
-        if len(mfa_devices['MFADevices']) == 0:
-            findings.append({
-                "user": username,
-                "issue": "User does not have MFA enabled",
-                "severity": "MEDIUM"
-            })
+    except ClientError as e:
+        print(f"IAM scan error: {e}")
 
     return findings
