@@ -14,7 +14,34 @@ def create_finding(service, resource, issue, severity):
     }
 
 
+
 def scan_ec2():
+    findings = []
+    regions = get_all_regions()
+
+    for region in regions:
+        ec2 = boto3.client("ec2", region_name=region)
+
+        try:
+            security_groups = ec2.describe_security_groups()["SecurityGroups"]
+
+            for sg in security_groups:
+                sg_id = sg["GroupId"]
+
+                for permission in sg.get("IpPermissions", []):
+                    for ip_range in permission.get("IpRanges", []):
+                        if ip_range.get("CidrIp") == "0.0.0.0/0":
+                            findings.append({
+                                "service": "EC2",
+                                "resource": sg_id,
+                                "issue": f"Open to world in {region}",
+                                "severity": "HIGH"
+                            })
+
+        except Exception:
+            continue
+
+    return findings
     findings = []
 
     try:
