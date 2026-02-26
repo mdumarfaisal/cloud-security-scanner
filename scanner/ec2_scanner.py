@@ -1,5 +1,6 @@
 import boto3
 from botocore.exceptions import ClientError
+from scanner.utils import get_all_regions
 
 ec2 = boto3.client("ec2")
 
