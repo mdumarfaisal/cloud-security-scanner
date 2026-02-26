@@ -13,11 +13,11 @@ spec:
         app: aws-scanner
     spec:
       containers:
-      - name: aws-scanner
-        image: aws-scanner:1.0
-        imagePullPolicy: Never
-        ports:
-        - containerPort: 8000
-        envFrom:
-        - secretRef:
-            name: aws-credentials
+        - name: aws-scanner
+          image: aws-scanner:4.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - secretRef:
+                name: aws-credentials
