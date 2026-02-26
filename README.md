@@ -1,149 +1,35 @@
-# 🛡️ Automated Cloud Security Configuration Scanner
+☁️ Cloud-Native AWS Security Scanner
 
-An automated AWS cloud security configuration scanner built using Python, FastAPI, and boto3.  
-This tool scans IAM, S3, and EC2 resources for common security misconfigurations and exposes results through a REST API with analytics-ready output.
+A cloud-native AWS security configuration scanner built using Python, FastAPI, Docker, and Kubernetes.
 
----
+This tool programmatically audits AWS resources (IAM, S3, EC2) for common security misconfigurations and exposes structured findings through a REST API.
 
-## 🚀 Project Overview
+Designed as a DevSecOps-ready, containerized cloud security project.
 
-This project detects common AWS security risks such as:
+🚀 Features
+🔍 IAM Security Checks
 
-- IAM users without MFA
-- IAM users with AdministratorAccess policy
-- Public S3 buckets (policy or ACL)
-- EC2 security groups exposing SSH (22) or RDP (3389) to the internet
+Detects users attached to AdministratorAccess
 
-The scanner aggregates findings, calculates severity distribution, and generates structured JSON reports accessible via API.
+Detects IAM users without MFA enabled
 
----
+🪣 S3 Security Checks
 
-## 🏗️ Architecture
+Detects public bucket policies
 
-User (Swagger UI / Future Dashboard)  
-↓  
-FastAPI Backend  
-↓  
-Scanner Modules (IAM, S3, EC2)  
-↓  
-AWS Cloud (via boto3)  
-↓  
-JSON Report (reports/report.json)
+Detects public bucket ACLs
 
----
+🖥 EC2 Security Checks
 
-## 📂 Project Structure
+Detects security groups exposing:
 
+SSH (Port 22) to 0.0.0.0/0
 
-cloud-security-scanner/
-│
-├── api/
-│ ├── __init__.py
-│ └── main.py
-│
-├── scanner/
-│ ├── __init__.py
-│ ├── iam_scanner.py
-│ ├── s3_scanner.py
-│ └── ec2_scanner.py
-│
-├── reports/
-│ └── report.json
-│
-├── requirements.txt
-└── README.md
+RDP (Port 3389) to 0.0.0.0/0
 
+📊 Severity Classification
 
----
-
-## 🛠️ Tech Stack
-
-- Python 3.13
-- FastAPI
-- Uvicorn
-- boto3
-- AWS IAM / S3 / EC2 APIs
-- Swagger UI (auto-generated)
-
----
-
-## ⚙️ Installation & Setup
-
-### 1️⃣ Clone the Repository
-
-```bash
-git clone https://github.com/<your-username>/cloud-security-scanner.git
-cd cloud-security-scanner
-2️⃣ Install Dependencies
-pip install -r requirements.txt
-
-Or manually:
-
-pip install fastapi uvicorn boto3
-3️⃣ Configure AWS Credentials
-
-Make sure AWS credentials are configured:
-
-aws configure
-
-Or ensure environment variables are set:
-
-AWS_ACCESS_KEY_ID
-AWS_SECRET_ACCESS_KEY
-AWS_DEFAULT_REGION
-4️⃣ Run the API Server
-python -m uvicorn api.main:app --reload
-
-Server runs at:
-
-http://127.0.0.1:8000
-
-Swagger UI:
-
-http://127.0.0.1:8000/docs
-📡 API Endpoints
-🔹 POST /scan
-
-Triggers AWS security scan and generates report.
-
-🔹 GET /report
-
-Returns full scan report (account info + findings).
-
-🔹 GET /summary
-
-Returns severity distribution only.
-
-Example response:
-
-{
-  "HIGH": 1,
-  "CRITICAL": 1
-}
-🔍 Example Finding
-{
-  "service": "S3",
-  "resource": "example-bucket",
-  "issue": "Bucket has public policy",
-  "severity": "CRITICAL"
-}
-📊 Current Capabilities
-
-Detect IAM users without MFA
-
-Detect IAM users with AdministratorAccess
-
-Detect public S3 bucket policy
-
-Detect public S3 bucket ACL
-
-Detect EC2 Security Groups open to 0.0.0.0/0
-
-Generate structured JSON reports
-
-Provide REST API for frontend dashboard integration
-
-🔐 Severity Levels
+Each finding is categorized as:
 
 CRITICAL
 
@@ -151,42 +37,192 @@ HIGH
 
 MEDIUM
 
-LOW (future support)
-
 Severity summary is dynamically calculated during each scan.
 
-🧩 Future Enhancements
+🌐 REST API
 
-React Dashboard with severity analytics
+Built using FastAPI
+
+Auto-generated Swagger documentation
+
+JSON analytics-ready output
+
+🐳 Cloud-Native Deployment
+
+Dockerized application
+
+Kubernetes deployment (Minikube tested)
+
+Self-healing verified
+
+Service exposure validated
+
+🏗 Architecture
+FastAPI Application
+        ↓
+Docker Container
+        ↓
+Kubernetes Deployment
+        ↓
+Pod
+        ↓
+Service (NodePort / Port-Forward)
+        ↓
+AWS APIs (IAM, S3, EC2 via boto3)
+🛠 Tech Stack
+
+Python 3.11
+
+FastAPI
+
+Uvicorn
+
+Boto3 (AWS SDK)
+
+Docker
+
+Kubernetes (Minikube)
+
+📦 Project Structure
+cloud-security-scanner/
+│
+├── api/
+│   └── main.py
+│
+├── scanner/
+│   ├── iam_scanner.py
+│   ├── s3_scanner.py
+│   └── ec2_scanner.py
+│
+├── deployment.yaml
+├── service.yaml
+├── Dockerfile
+├── requirements.txt
+└── README.md
+🔧 Local Setup
+1️⃣ Install Dependencies
+pip install -r requirements.txt
+2️⃣ Configure AWS Credentials
+export AWS_ACCESS_KEY_ID=YOUR_KEY
+export AWS_SECRET_ACCESS_KEY=YOUR_SECRET
+export AWS_DEFAULT_REGION=eu-north-1
+
+Or use:
+
+aws configure
+3️⃣ Run Application
+uvicorn api.main:app --host 0.0.0.0 --port 8000
+
+Access Swagger UI:
+
+http://localhost:8000/docs
+🐳 Docker Setup
+Build Image
+docker build -t aws-scanner:1.0 .
+Run Container
+docker run -p 8000:8000 \
+-e AWS_ACCESS_KEY_ID=YOUR_KEY \
+-e AWS_SECRET_ACCESS_KEY=YOUR_SECRET \
+-e AWS_DEFAULT_REGION=eu-north-1 \
+aws-scanner:1.0
+☸️ Kubernetes Deployment (Minikube)
+Start Minikube
+minikube start
+Load Image
+minikube image load aws-scanner:1.0
+Deploy
+kubectl apply -f deployment.yaml
+kubectl apply -f service.yaml
+Verify
+kubectl get pods
+kubectl get svc
+Access via Port Forward
+kubectl port-forward svc/aws-scanner-service 8000:8000
+
+Open:
+
+http://localhost:8000/docs
+🔎 API Endpoints
+GET /
+
+Health check endpoint.
+
+GET /scan
+
+Runs full AWS security scan and returns:
+
+{
+  "account_id": "123456789012",
+  "region": "eu-north-1",
+  "summary": {
+    "CRITICAL": 1,
+    "HIGH": 2,
+    "MEDIUM": 0
+  },
+  "findings": [...]
+}
+🔁 Kubernetes Validation
+
+Pod health verified
+
+Logs inspected
+
+API tested inside cluster
+
+Manual pod deletion → automatic recreation confirmed
+
+Service exposure validated
+
+Confirms Kubernetes self-healing behavior.
+
+🔐 Security Note
+
+For demonstration, AWS credentials were passed via environment variables.
+
+In production:
+
+Use Kubernetes Secrets
+
+Prefer IAM Roles over static access keys
+
+Add authentication & RBAC
+
+Enable logging & monitoring
+
+🎯 Learning Outcomes
+
+Cloud-native architecture design
 
 Docker containerization
 
-Kubernetes deployment
+Kubernetes Deployment & Service configuration
 
-Report export (PDF)
+AWS SDK (Boto3) integration
+
+REST API development with FastAPI
+
+DevSecOps fundamentals
+
+Kubernetes self-healing validation
+
+📌 Future Improvements
+
+Add RDS & Lambda scanning
+
+Add authentication layer (JWT)
+
+Add React dashboard
+
+Deploy to AWS EKS
+
+CI/CD integration
 
 Historical scan tracking
 
-Authentication & RBAC
-
-🎯 Use Cases
-
-Cloud security auditing
-
-DevSecOps integration
-
-Internship / academic project
-
-Resume-ready cloud security tool
+Replace static keys with IAM Roles
 
 👨‍💻 Author
 
 Md Umar Faisal
 B.Tech – Computer Science and Engineering
-Cloud Computing
-Cloud Security Project
-
-📜 License
-
-This project is for educational and research purposes.
-
+Cloud Computing Project
