@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: aws-scanner
-          image: aws-scanner:4.0
+          image: aws-scanner
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8000
