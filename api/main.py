@@ -3,6 +3,7 @@ from scanner.iam_scanner import scan_iam
 from scanner.s3_scanner import scan_s3
 from scanner.ec2_scanner import scan_ec2
 from scanner.compliance import get_services
+from scanner.utils import get_all_regions
 from report_generator import generate_pdf
 
 import boto3
@@ -25,6 +26,9 @@ def run_scan(compliance_mode="BASIC"):
 
     findings = []
     services = get_services(compliance_mode)
+
+    # 🌍 Get all regions (for report visibility)
+    scanned_regions = get_all_regions()
 
     # 🔥 Parallel Service Scanning
     scan_functions = []
@@ -79,7 +83,7 @@ def run_scan(compliance_mode="BASIC"):
     # 📊 Final Report Structure
     report = {
         "account_id": get_account_id(),
-        "region": boto3.Session().region_name,
+        "scanned_regions": scanned_regions,   # 🔥 Multi-region visibility
         "scan_time": datetime.now(UTC).isoformat(),
         "compliance_mode": compliance_mode,
         "risk_score": normalized_score,
@@ -123,5 +127,6 @@ def get_summary():
             "summary": report["summary"],
             "risk_score": report["risk_score"],
             "security_level": report["security_level"],
-            "compliance_mode": report["compliance_mode"]
+            "compliance_mode": report["compliance_mode"],
+            "scanned_regions": report["scanned_regions"]
         }
