@@ -6,6 +6,8 @@ from scanner.compliance import get_services
 from scanner.utils import get_all_regions
 from report_generator import generate_pdf
 
+from fastapi.middleware.cors import CORSMiddleware
+
 import boto3
 import json
 import os
