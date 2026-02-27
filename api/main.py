@@ -25,6 +25,11 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 app = FastAPI()
 
 
+
+# Static files for frontend
+
+app.mount("/static", StaticFiles(directory="frontend"), name="static")
+
 # 🔐 Get AWS Account ID
 def get_account_id():
     sts = boto3.client("sts")
