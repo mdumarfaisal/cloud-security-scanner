@@ -6,7 +6,15 @@ from scanner.compliance import get_services
 from scanner.utils import get_all_regions
 from report_generator import generate_pdf
 
+# ============================
+# 🌐 FASTAPI SETUP
+# ============================
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+# ============================
+# 🔐 AWS SCAN ENGINE
 
 import boto3
 import json
@@ -132,3 +140,12 @@ def get_summary():
             "compliance_mode": report["compliance_mode"],
             "scanned_regions": report["scanned_regions"]
         }
+    
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
