@@ -1,52 +1,70 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Cloud Security Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        body { font-family: Arial; margin: 40px; background: #f4f6f9; }
-        .card { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; }
-        .risk { font-size: 24px; font-weight: bold; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 8px; border-bottom: 1px solid #ddd; }
-        th { background: #222; color: white; }
-    </style>
-</head>
-<body>
+async function loadDashboard() {
 
-<h1>☁️ Cloud Security Dashboard</h1>
+    const summaryRes = await fetch("http://localhost:8000/summary");
+    const summaryData = await summaryRes.json();
 
-<div class="card">
-    <div>Total Issues: <span id="total"></span></div>
-    <div class="risk">Risk Score: <span id="risk"></span></div>
-    <div>Security Level: <span id="level"></span></div>
-</div>
+    const reportRes = await fetch("http://localhost:8000/report");
+    const reportData = await reportRes.json();
 
-<div class="card">
-    <canvas id="severityChart"></canvas>
-</div>
+    const summary = summaryData.summary;
 
-<div class="card">
-    <canvas id="serviceChart"></canvas>
-</div>
+    document.getElementById("risk").innerText = summaryData.risk_score;
+    document.getElementById("level").innerText = summaryData.security_level;
 
-<div class="card">
-    <h3>Findings</h3>
-    <table>
-        <thead>
+    const totalIssues =
+        summary.CRITICAL + summary.HIGH + summary.MEDIUM;
+
+    document.getElementById("total").innerText = totalIssues;
+
+    // 🔴 Severity Pie Chart
+    new Chart(document.getElementById("severityChart"), {
+        type: "pie",
+        data: {
+            labels: ["CRITICAL", "HIGH", "MEDIUM"],
+            datasets: [{
+                data: [
+                    summary.CRITICAL,
+                    summary.HIGH,
+                    summary.MEDIUM
+                ]
+            }]
+        }
+    });
+
+    // 🟢 Service-wise Distribution
+    const serviceCounts = {};
+
+    reportData.findings.forEach(f => {
+        serviceCounts[f.service] =
+            (serviceCounts[f.service] || 0) + 1;
+    });
+
+    new Chart(document.getElementById("serviceChart"), {
+        type: "bar",
+        data: {
+            labels: Object.keys(serviceCounts),
+            datasets: [{
+                label: "Issues per Service",
+                data: Object.values(serviceCounts)
+            }]
+        }
+    });
+
+    // 📋 Populate Findings Table
+    const table = document.getElementById("findingsTable");
+
+    reportData.findings.forEach(f => {
+        const row = `
             <tr>
-                <th>Service</th>
-                <th>Resource</th>
-                <th>Issue</th>
-                <th>Severity</th>
-                <th>Region</th>
+                <td>${f.service}</td>
+                <td>${f.resource}</td>
+                <td>${f.issue}</td>
+                <td>${f.severity}</td>
+                <td>${f.region || "-"}</td>
             </tr>
-        </thead>
-        <tbody id="findingsTable"></tbody>
-    </table>
-</div>
+        `;
+        table.innerHTML += row;
+    });
+}
 
-<script src="script.js"></script>
-
-</body>
-</html>
+loadDashboard();
