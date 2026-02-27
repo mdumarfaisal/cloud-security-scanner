@@ -147,6 +147,12 @@ def get_summary():
         }
     
 
+
+@app.get("/")
+def serve_frontend():
+    return FileResponse("frontend/index.html")
+    
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
