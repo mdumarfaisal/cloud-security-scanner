@@ -1,8 +1,12 @@
+async function triggerScan() {
+    await fetch("/scan", { method: "POST" });
+    loadDashboard();
+}
+
 async function loadDashboard() {
 
-    // 🔥 Run scan and get full report
-    const res = await fetch("/scan", { method: "POST" });
-    const reportData = await res.json();
+    const reportRes = await fetch("/report");
+    const reportData = await reportRes.json();
 
     const summary = reportData.summary;
 
@@ -14,6 +18,18 @@ async function loadDashboard() {
 
     document.getElementById("total").innerText = totalIssues;
 
+    // 🔥 Risk Bar
+    const riskBar = document.getElementById("riskBar");
+    riskBar.style.width = reportData.risk_score + "%";
+
+    if (reportData.risk_score > 80) {
+        riskBar.style.background = "#2ecc71";
+    } else if (reportData.risk_score > 50) {
+        riskBar.style.background = "#f39c12";
+    } else {
+        riskBar.style.background = "#e74c3c";
+    }
+
     // 🔴 Severity Pie Chart
     new Chart(document.getElementById("severityChart"), {
         type: "pie",
@@ -24,6 +40,11 @@ async function loadDashboard() {
                     summary.CRITICAL,
                     summary.HIGH,
                     summary.MEDIUM
+                ],
+                backgroundColor: [
+                    "#e74c3c",
+                    "#f39c12",
+                    "#3498db"
                 ]
             }]
         }
@@ -43,14 +64,15 @@ async function loadDashboard() {
             labels: Object.keys(serviceCounts),
             datasets: [{
                 label: "Issues per Service",
-                data: Object.values(serviceCounts)
+                data: Object.values(serviceCounts),
+                backgroundColor: "#3498db"
             }]
         }
     });
 
     // 📋 Populate Findings Table
     const table = document.getElementById("findingsTable");
-    table.innerHTML = ""; // clear old rows
+    table.innerHTML = "";
 
     reportData.findings.forEach(f => {
         const row = `
@@ -66,4 +88,8 @@ async function loadDashboard() {
     });
 }
 
+// Load dashboard initially
 loadDashboard();
+
+// Auto refresh every 30 seconds
+setInterval(loadDashboard, 30000);
