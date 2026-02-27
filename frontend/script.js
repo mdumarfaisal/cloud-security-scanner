@@ -1,15 +1,13 @@
 async function loadDashboard() {
 
-    const summaryRes = await fetch("http://localhost:8000/summary");
-    const summaryData = await summaryRes.json();
+    // 🔥 Run scan and get full report
+    const res = await fetch("/scan", { method: "POST" });
+    const reportData = await res.json();
 
-    const reportRes = await fetch("http://localhost:8000/report");
-    const reportData = await reportRes.json();
+    const summary = reportData.summary;
 
-    const summary = summaryData.summary;
-
-    document.getElementById("risk").innerText = summaryData.risk_score;
-    document.getElementById("level").innerText = summaryData.security_level;
+    document.getElementById("risk").innerText = reportData.risk_score;
+    document.getElementById("level").innerText = reportData.security_level;
 
     const totalIssues =
         summary.CRITICAL + summary.HIGH + summary.MEDIUM;
@@ -52,6 +50,7 @@ async function loadDashboard() {
 
     // 📋 Populate Findings Table
     const table = document.getElementById("findingsTable");
+    table.innerHTML = ""; // clear old rows
 
     reportData.findings.forEach(f => {
         const row = `
