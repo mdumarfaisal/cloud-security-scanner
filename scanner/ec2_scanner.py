@@ -75,4 +75,6 @@ def scan_ec2():
             print(f"EC2 scan error in {region}: {e}")
             continue
 
-    return findings
+    return findings 
+
+
