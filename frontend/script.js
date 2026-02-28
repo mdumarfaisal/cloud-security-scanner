@@ -1,6 +1,5 @@
 let scanHistory = JSON.parse(localStorage.getItem("scanHistory")) || [];
-let severityChart;
-let serviceChart;
+let severityChart, serviceChart;
 
 function showDashboard() {
     document.getElementById("dashboardSection").classList.remove("hidden");
@@ -27,8 +26,8 @@ function setActive(section) {
 
 async function triggerScan() {
     document.getElementById("loader").classList.remove("hidden");
-    document.getElementById("statusIndicator").innerHTML =
-        "<span style='color:#f39c12'>● Scanning...</span>";
+    document.getElementById("statusIndicator").style.color = "#f39c12";
+    document.getElementById("statusIndicator").innerText = "● Scanning...";
 
     const res = await fetch("/scan", { method: "POST" });
     const data = await res.json();
@@ -46,21 +45,22 @@ async function triggerScan() {
     localStorage.setItem("scanHistory", JSON.stringify(scanHistory));
 
     document.getElementById("loader").classList.add("hidden");
-    document.getElementById("statusIndicator").innerHTML =
-        "<span style='color:#2ecc71'>● Live</span>";
+    document.getElementById("statusIndicator").style.color = "#2ecc71";
+    document.getElementById("statusIndicator").innerText = "● Live";
 
     loadDashboard();
 }
 
 function calculateCISScore(summary) {
-    const totalIssues = summary.CRITICAL + summary.HIGH + summary.MEDIUM;
-    const maxScore = 100;
-    const penalty = totalIssues * 5;
-    return Math.max(0, maxScore - penalty);
+    const penalty =
+        (summary.CRITICAL * 10) +
+        (summary.HIGH * 6) +
+        (summary.MEDIUM * 3);
+
+    return Math.max(0, 100 - penalty);
 }
 
 async function loadDashboard() {
-
     const res = await fetch("/report");
     const data = await res.json();
 
@@ -68,6 +68,7 @@ async function loadDashboard() {
 
     animateValue("risk", data.risk_score);
     animateValue("cisScore", cisScore);
+
     document.getElementById("total").innerText =
         data.summary.CRITICAL +
         data.summary.HIGH +
@@ -77,9 +78,21 @@ async function loadDashboard() {
     document.getElementById("lastScan").innerText =
         new Date(data.scan_time).toLocaleString();
 
+    colorSecurityCard(data.security_level);
     updateCharts(data);
     updateCISBreakdown(data.summary);
     populateTable(data);
+}
+
+function colorSecurityCard(level) {
+    const card = document.getElementById("securityCard");
+
+    if (level === "LOW RISK")
+        card.style.background = "#eafaf1";
+    else if (level === "MODERATE RISK")
+        card.style.background = "#fdf2e9";
+    else
+        card.style.background = "#fdecea";
 }
 
 function updateCharts(data) {
@@ -87,8 +100,9 @@ function updateCharts(data) {
     if (severityChart) severityChart.destroy();
     if (serviceChart) serviceChart.destroy();
 
-    severityChart = new Chart(document.getElementById("severityChart"), {
-        type: "pie",
+    severityChart = new Chart(
+        document.getElementById("severityChart"), {
+        type: "doughnut",
         data: {
             labels: ["CRITICAL", "HIGH", "MEDIUM"],
             datasets: [{
@@ -99,6 +113,10 @@ function updateCharts(data) {
                 ],
                 backgroundColor: ["#e74c3c", "#f39c12", "#3498db"]
             }]
+        },
+        options: {
+            cutout: "60%",
+            plugins: { legend: { position: "bottom" } }
         }
     });
 
@@ -108,7 +126,8 @@ function updateCharts(data) {
             (serviceCounts[f.service] || 0) + 1;
     });
 
-    serviceChart = new Chart(document.getElementById("serviceChart"), {
+    serviceChart = new Chart(
+        document.getElementById("serviceChart"), {
         type: "bar",
         data: {
             labels: Object.keys(serviceCounts),
@@ -117,7 +136,8 @@ function updateCharts(data) {
                 data: Object.values(serviceCounts),
                 backgroundColor: "#4da3ff"
             }]
-        }
+        },
+        options: { plugins: { legend: { display: false } } }
     });
 }
 
@@ -133,15 +153,18 @@ function updateCISBreakdown(summary) {
 
     controls.forEach(c => {
         const percentage = Math.max(0, 100 - (c.value * 10));
+        const color = percentage > 80 ? "#2ecc71" :
+                      percentage > 50 ? "#f39c12" :
+                      "#e74c3c";
 
         container.innerHTML += `
-            <div style="margin-bottom:10px;">
-                ${c.name}
-                <div style="background:#eee; height:10px; border-radius:5px;">
+            <div style="margin-bottom:15px;">
+                <strong>${c.name}</strong>
+                <div style="background:#eee; height:10px; border-radius:5px; margin-top:5px;">
                     <div style="
                         width:${percentage}%;
                         height:10px;
-                        background:#2ecc71;
+                        background:${color};
                         border-radius:5px;">
                     </div>
                 </div>

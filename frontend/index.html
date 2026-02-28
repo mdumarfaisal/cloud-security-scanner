@@ -13,7 +13,7 @@
     <div class="sidebar">
         <h2>☁️ SecureCloud</h2>
         <ul>
-            <li id="navDashboard" onclick="showDashboard()">Dashboard</li>
+            <li id="navDashboard" class="active" onclick="showDashboard()">Dashboard</li>
             <li id="navHistory" onclick="showHistory()">Scan History</li>
         </ul>
     </div>
@@ -23,13 +23,12 @@
 
         <div id="loader" class="loader hidden">Scanning AWS Resources...</div>
 
-        <!-- DASHBOARD -->
         <div id="dashboardSection">
 
             <div class="top-bar">
                 <button onclick="triggerScan()">Run Scan</button>
                 <div>
-                    Status: <span id="statusIndicator">● Live</span><br>
+                    Status: <span id="statusIndicator" style="color:#2ecc71">● Live</span><br>
                     Last Scan: <span id="lastScan"></span>
                 </div>
             </div>
@@ -38,26 +37,26 @@
             <div class="cards">
                 <div class="card">
                     <h3>Total Issues</h3>
-                    <p id="total"></p>
+                    <p id="total">0</p>
                 </div>
 
                 <div class="card">
                     <h3>Risk Score</h3>
-                    <p id="risk"></p>
+                    <p id="risk">0</p>
                 </div>
 
-                <div class="card">
+                <div class="card" id="securityCard">
                     <h3>Security Level</h3>
                     <p id="level"></p>
                 </div>
 
                 <div class="card cis-card">
                     <h3>CIS Compliance</h3>
-                    <p id="cisScore"></p>
+                    <p id="cisScore">0</p>
                 </div>
             </div>
 
-            <!-- CHARTS -->
+            <!-- Charts -->
             <div class="charts">
                 <div class="chart-box">
                     <canvas id="severityChart"></canvas>
@@ -73,7 +72,7 @@
                 <div id="cisBreakdown"></div>
             </div>
 
-            <!-- FILTERS -->
+            <!-- Filters -->
             <div class="filters">
                 <select id="severityFilter" onchange="loadDashboard()">
                     <option value="">All Severities</option>
@@ -82,12 +81,13 @@
                     <option value="MEDIUM">MEDIUM</option>
                 </select>
 
-                <input type="text" id="searchInput"
+                <input type="text"
+                       id="searchInput"
                        placeholder="Search resource..."
                        oninput="loadDashboard()">
             </div>
 
-            <!-- TABLE -->
+            <!-- Table -->
             <table>
                 <thead>
                     <tr>
@@ -103,7 +103,7 @@
 
         </div>
 
-        <!-- HISTORY -->
+        <!-- Scan History -->
         <div id="historySection" class="hidden">
             <h2>Scan History</h2>
             <table>
@@ -124,10 +124,8 @@
         </div>
 
     </div>
-
 </div>
 
 <script src="/static/script.js"></script>
-
 </body>
 </html>
