@@ -178,3 +178,32 @@ tr:hover {
 
 
 
+.info-icon {
+    font-size: 14px;
+    margin-left: 6px;
+    cursor: pointer;
+    color: #4da3ff;
+    position: relative;
+}
+
+.info-icon::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1f1f38;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    width: 250px;
+    text-align: left;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+
+.info-icon:hover::after {
+    opacity: 1;
+}

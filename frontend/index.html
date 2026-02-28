@@ -1,131 +1,143 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>SecureCloud Platform</title>
     <link rel="stylesheet" href="/static/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body>
 
-<div class="app">
+    <div class="app">
 
-    <!-- Sidebar -->
-    <div class="sidebar">
-        <h2>☁️ SecureCloud</h2>
-        <ul>
-            <li id="navDashboard" class="active" onclick="showDashboard()">Dashboard</li>
-            <li id="navHistory" onclick="showHistory()">Scan History</li>
-        </ul>
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <h2>☁️ SecureCloud</h2>
+            <ul>
+                <li id="navDashboard" class="active" onclick="showDashboard()">Dashboard</li>
+                <li id="navHistory" onclick="showHistory()">Scan History</li>
+            </ul>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+
+            <div id="loader" class="loader hidden">Scanning AWS Resources...</div>
+
+            <div id="dashboardSection">
+
+                <div class="top-bar">
+                    <button onclick="triggerScan()">Run Scan</button>
+                    <div>
+                        Status: <span id="statusIndicator" style="color:#2ecc71">● Live</span><br>
+                        Last Scan: <span id="lastScan"></span>
+                    </div>
+                </div>
+
+                <!-- KPI CARDS -->
+                <div class="cards">
+                    <div class="card">
+                        <h3>Total Issues</h3>
+                        <p id="total">0</p>
+                    </div>
+
+                    <div class="card">
+                        <h3>
+                            Risk Score
+                            <span class="info-icon" data-tooltip="Risk Score = 100 - (CRITICAL×10 + HIGH×6 + MEDIUM×3).
+                                Higher score = more secure account.">
+                                ⓘ
+                            </span>
+                        </h3>
+                        <p id="risk">0</p>
+                    </div>
+
+                    <div class="card" id="securityCard">
+                        <h3>Security Level</h3>
+                        <p id="level"></p>
+                    </div>
+
+                    <div class="card cis-card">
+                        <h3>
+                            CIS Compliance
+                            <span class="info-icon"
+                                data-tooltip="CIS Score is calculated using weighted penalties based on security findings aligned with CIS AWS Benchmark controls.">
+                                ⓘ
+                            </span>
+                        </h3>
+                        <p id="cisScore">0</p>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="charts">
+                    <div class="chart-box">
+                        <canvas id="severityChart"></canvas>
+                    </div>
+                    <div class="chart-box">
+                        <canvas id="serviceChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- CIS Breakdown -->
+                <div class="card">
+                    <h3>CIS Control Breakdown</h3>
+                    <div id="cisBreakdown"></div>
+                </div>
+
+                <!-- Filters -->
+                <div class="filters">
+                    <select id="severityFilter" onchange="loadDashboard()">
+                        <option value="">All Severities</option>
+                        <option value="CRITICAL">CRITICAL</option>
+                        <option value="HIGH">HIGH</option>
+                        <option value="MEDIUM">MEDIUM</option>
+                    </select>
+
+                    <input type="text" id="searchInput" placeholder="Search resource..." oninput="loadDashboard()">
+                </div>
+
+                <!-- Table -->
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Service</th>
+                            <th>Resource</th>
+                            <th>Issue</th>
+                            <th>Severity</th>
+                            <th>Region</th>
+                        </tr>
+                    </thead>
+                    <tbody id="findingsTable"></tbody>
+                </table>
+
+            </div>
+
+            <!-- Scan History -->
+            <div id="historySection" class="hidden">
+                <h2>Scan History</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Scan Time</th>
+                            <th>Risk Score</th>
+                            <th>CIS Score</th>
+                            <th>Security Level</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTable"></tbody>
+                </table>
+            </div>
+
+            <div class="footer">
+                © 2026 SecureCloud | Built by Umar Faisal
+            </div>
+
+        </div>
     </div>
 
-    <!-- Content -->
-    <div class="content">
-
-        <div id="loader" class="loader hidden">Scanning AWS Resources...</div>
-
-        <div id="dashboardSection">
-
-            <div class="top-bar">
-                <button onclick="triggerScan()">Run Scan</button>
-                <div>
-                    Status: <span id="statusIndicator" style="color:#2ecc71">● Live</span><br>
-                    Last Scan: <span id="lastScan"></span>
-                </div>
-            </div>
-
-            <!-- KPI CARDS -->
-            <div class="cards">
-                <div class="card">
-                    <h3>Total Issues</h3>
-                    <p id="total">0</p>
-                </div>
-
-                <div class="card">
-                    <h3>Risk Score</h3>
-                    <p id="risk">0</p>
-                </div>
-
-                <div class="card" id="securityCard">
-                    <h3>Security Level</h3>
-                    <p id="level"></p>
-                </div>
-
-                <div class="card cis-card">
-                    <h3>CIS Compliance</h3>
-                    <p id="cisScore">0</p>
-                </div>
-            </div>
-
-            <!-- Charts -->
-            <div class="charts">
-                <div class="chart-box">
-                    <canvas id="severityChart"></canvas>
-                </div>
-                <div class="chart-box">
-                    <canvas id="serviceChart"></canvas>
-                </div>
-            </div>
-
-            <!-- CIS Breakdown -->
-            <div class="card">
-                <h3>CIS Control Breakdown</h3>
-                <div id="cisBreakdown"></div>
-            </div>
-
-            <!-- Filters -->
-            <div class="filters">
-                <select id="severityFilter" onchange="loadDashboard()">
-                    <option value="">All Severities</option>
-                    <option value="CRITICAL">CRITICAL</option>
-                    <option value="HIGH">HIGH</option>
-                    <option value="MEDIUM">MEDIUM</option>
-                </select>
-
-                <input type="text"
-                       id="searchInput"
-                       placeholder="Search resource..."
-                       oninput="loadDashboard()">
-            </div>
-
-            <!-- Table -->
-            <table>
-                <thead>
-                    <tr>
-                        <th>Service</th>
-                        <th>Resource</th>
-                        <th>Issue</th>
-                        <th>Severity</th>
-                        <th>Region</th>
-                    </tr>
-                </thead>
-                <tbody id="findingsTable"></tbody>
-            </table>
-
-        </div>
-
-        <!-- Scan History -->
-        <div id="historySection" class="hidden">
-            <h2>Scan History</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Scan Time</th>
-                        <th>Risk Score</th>
-                        <th>CIS Score</th>
-                        <th>Security Level</th>
-                    </tr>
-                </thead>
-                <tbody id="historyTable"></tbody>
-            </table>
-        </div>
-
-        <div class="footer">
-            © 2026 SecureCloud | Built by Umar Faisal
-        </div>
-
-    </div>
-</div>
-
-<script src="/static/script.js"></script>
+    <script src="/static/script.js"></script>
 </body>
+
 </html>
