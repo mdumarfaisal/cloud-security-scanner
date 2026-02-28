@@ -152,12 +152,22 @@ tr:hover {
     font-weight: 600;
 }
 
-.chart-box {
-    width: 45%;
-}
 
 .cis-card p {
     color: #2ecc71;
+}
+
+
+.chart-box {
+    width: 48%;
+    max-width: 500px;
+}
+
+.charts {
+    display: flex;
+    justify-content: space-between;
+    gap: 30px;
+    margin: 30px 0;
 }
 
 .footer {
