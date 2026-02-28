@@ -59,12 +59,31 @@ async function loadDashboard() {
                     <td>${f.service}</td>
                     <td>${f.resource}</td>
                     <td>${f.issue}</td>
-                    <td>${f.severity}</td>
+                    <td>${getSeverityBadge(f.severity)}</td>
                     <td>${f.region || "-"}</td>
                 </tr>
             `;
         });
 }
+
+function getSeverityBadge(severity) {
+    const colors = {
+        CRITICAL: "#e74c3c",
+        HIGH: "#f39c12",
+        MEDIUM: "#3498db"
+    };
+
+    return `<span style="
+        background:${colors[severity]};
+        color:white;
+        padding:4px 10px;
+        border-radius:20px;
+        font-size:12px;
+        font-weight:500;">
+        ${severity}
+    </span>`;
+}
+
 
 function loadHistory() {
     const table = document.getElementById("historyTable");
