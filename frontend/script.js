@@ -1,4 +1,12 @@
-let scanHistory = [];
+// ==============================
+// 🔥 Persistent Scan History
+// ==============================
+
+let scanHistory = JSON.parse(localStorage.getItem("scanHistory")) || [];
+
+// ==============================
+// 🧭 Navigation
+// ==============================
 
 function showDashboard() {
     document.getElementById("dashboardSection").classList.remove("hidden");
@@ -11,61 +19,98 @@ function showHistory() {
     loadHistory();
 }
 
+// ==============================
+// 🚀 Trigger Scan
+// ==============================
+
 async function triggerScan() {
-    document.getElementById("loader").classList.remove("hidden");
+    const loader = document.getElementById("loader");
+    loader.classList.remove("hidden");
 
-    const res = await fetch("/scan", { method: "POST" });
-    const data = await res.json();
+    try {
+        const res = await fetch("/scan", { method: "POST" });
 
-    scanHistory.push({
-        time: data.scan_time,
-        score: data.risk_score,
-        level: data.security_level
-    });
+        if (!res.ok) throw new Error("Scan failed");
 
-    document.getElementById("loader").classList.add("hidden");
+        const data = await res.json();
 
-    loadDashboard();
+        // Save history
+        scanHistory.unshift({
+            time: data.scan_time,
+            score: data.risk_score,
+            level: data.security_level
+        });
+
+        // Keep only last 10 scans
+        scanHistory = scanHistory.slice(0, 10);
+
+        localStorage.setItem("scanHistory", JSON.stringify(scanHistory));
+
+        await loadDashboard();
+
+    } catch (err) {
+        alert("Scan failed. Check backend.");
+        console.error(err);
+    }
+
+    loader.classList.add("hidden");
 }
+
+// ==============================
+// 📊 Load Dashboard
+// ==============================
 
 async function loadDashboard() {
 
-    const res = await fetch("/report");
-    const data = await res.json();
+    try {
+        const res = await fetch("/report");
+        if (!res.ok) return;
 
-    const severityFilter = document.getElementById("severityFilter").value;
-    const searchText = document.getElementById("searchInput").value.toLowerCase();
+        const data = await res.json();
 
+        const severityFilter = document.getElementById("severityFilter").value;
+        const searchText = document.getElementById("searchInput").value.toLowerCase();
 
-    const level = document.getElementById("level");
-    if (data.security_level === "LOW RISK") {
-        level.style.color = "#2ecc71";
-    }
-    else if (data.security_level === "MODERATE RISK") {
-        level.style.color = "#f39c12";
-    }
-    else {
-        level.style.color = "#e74c3c";
-    }
+        // Summary
+        document.getElementById("total").innerText =
+            data.summary.CRITICAL +
+            data.summary.HIGH +
+            data.summary.MEDIUM;
 
-    document.getElementById("total").innerText =
-        data.summary.CRITICAL +
-        data.summary.HIGH +
-        data.summary.MEDIUM;
+        document.getElementById("risk").innerText = data.risk_score;
+        document.getElementById("level").innerText = data.security_level;
+        document.getElementById("lastScan").innerText = new Date(data.scan_time).toLocaleString();
 
-    document.getElementById("risk").innerText = data.risk_score;
-    document.getElementById("level").innerText = data.security_level;
-    document.getElementById("lastScan").innerText = data.scan_time;
+        // 🎯 Risk Color
+        const level = document.getElementById("level");
+        if (data.security_level === "LOW RISK") {
+            level.style.color = "#2ecc71";
+        } else if (data.security_level === "MODERATE RISK") {
+            level.style.color = "#f39c12";
+        } else {
+            level.style.color = "#e74c3c";
+        }
 
-    const table = document.getElementById("findingsTable");
-    table.innerHTML = "";
+        // Table
+        const table = document.getElementById("findingsTable");
+        table.innerHTML = "";
 
-    data.findings
-        .filter(f =>
+        const filteredFindings = data.findings.filter(f =>
             (!severityFilter || f.severity === severityFilter) &&
             (!searchText || f.resource.toLowerCase().includes(searchText))
-        )
-        .forEach(f => {
+        );
+
+        if (filteredFindings.length === 0) {
+            table.innerHTML = `
+                <tr>
+                    <td colspan="5" style="text-align:center; padding:20px;">
+                        No findings match filter.
+                    </td>
+                </tr>
+            `;
+        }
+
+        filteredFindings.forEach(f => {
             table.innerHTML += `
                 <tr>
                     <td>${f.service}</td>
@@ -76,7 +121,15 @@ async function loadDashboard() {
                 </tr>
             `;
         });
+
+    } catch (err) {
+        console.error("Dashboard load error:", err);
+    }
 }
+
+// ==============================
+// 🎨 Severity Badge
+// ==============================
 
 function getSeverityBadge(severity) {
     const colors = {
@@ -85,26 +138,42 @@ function getSeverityBadge(severity) {
         MEDIUM: "#3498db"
     };
 
-    return `<span style="
-        background:${colors[severity]};
-        color:white;
-        padding:4px 10px;
-        border-radius:20px;
-        font-size:12px;
-        font-weight:500;">
-        ${severity}
-    </span>`;
+    return `
+        <span style="
+            background:${colors[severity]};
+            color:white;
+            padding:4px 10px;
+            border-radius:20px;
+            font-size:12px;
+            font-weight:500;">
+            ${severity}
+        </span>
+    `;
 }
 
+// ==============================
+// 📜 Scan History
+// ==============================
 
 function loadHistory() {
     const table = document.getElementById("historyTable");
     table.innerHTML = "";
 
+    if (scanHistory.length === 0) {
+        table.innerHTML = `
+            <tr>
+                <td colspan="3" style="text-align:center; padding:20px;">
+                    No scan history available.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
     scanHistory.forEach(h => {
         table.innerHTML += `
             <tr>
-                <td>${h.time}</td>
+                <td>${new Date(h.time).toLocaleString()}</td>
                 <td>${h.score}</td>
                 <td>${h.level}</td>
             </tr>
@@ -112,4 +181,11 @@ function loadHistory() {
     });
 }
 
+// ==============================
+// 🔄 Auto Refresh Every 30s
+// ==============================
+
+setInterval(loadDashboard, 30000);
+
+// Initial load
 loadDashboard();
