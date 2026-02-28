@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Cloud Security Platform</title>
+    <title>SecureCloud Platform</title>
     <link rel="stylesheet" href="/static/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -13,45 +13,67 @@
     <div class="sidebar">
         <h2>☁️ SecureCloud</h2>
         <ul>
-            <li onclick="showDashboard()">Dashboard</li>
-            <li onclick="showHistory()">Scan History</li>
+            <li id="navDashboard" onclick="showDashboard()">Dashboard</li>
+            <li id="navHistory" onclick="showHistory()">Scan History</li>
         </ul>
     </div>
 
-    <!-- Main Content -->
+    <!-- Content -->
     <div class="content">
 
-        <!-- Loader -->
         <div id="loader" class="loader hidden">Scanning AWS Resources...</div>
 
-        <!-- Dashboard Section -->
+        <!-- DASHBOARD -->
         <div id="dashboardSection">
 
             <div class="top-bar">
                 <button onclick="triggerScan()">Run Scan</button>
-                <div>Last Scan: <span id="lastScan"></span></div>
+                <div>
+                    Status: <span id="statusIndicator">● Live</span><br>
+                    Last Scan: <span id="lastScan"></span>
+                </div>
             </div>
 
+            <!-- KPI CARDS -->
             <div class="cards">
                 <div class="card">
                     <h3>Total Issues</h3>
                     <p id="total"></p>
                 </div>
+
                 <div class="card">
                     <h3>Risk Score</h3>
                     <p id="risk"></p>
                 </div>
+
                 <div class="card">
                     <h3>Security Level</h3>
                     <p id="level"></p>
                 </div>
+
+                <div class="card cis-card">
+                    <h3>CIS Compliance</h3>
+                    <p id="cisScore"></p>
+                </div>
             </div>
 
+            <!-- CHARTS -->
             <div class="charts">
-                <canvas id="severityChart"></canvas>
-                <canvas id="serviceChart"></canvas>
+                <div class="chart-box">
+                    <canvas id="severityChart"></canvas>
+                </div>
+                <div class="chart-box">
+                    <canvas id="serviceChart"></canvas>
+                </div>
             </div>
 
+            <!-- CIS Breakdown -->
+            <div class="card">
+                <h3>CIS Control Breakdown</h3>
+                <div id="cisBreakdown"></div>
+            </div>
+
+            <!-- FILTERS -->
             <div class="filters">
                 <select id="severityFilter" onchange="loadDashboard()">
                     <option value="">All Severities</option>
@@ -65,6 +87,7 @@
                        oninput="loadDashboard()">
             </div>
 
+            <!-- TABLE -->
             <table>
                 <thead>
                     <tr>
@@ -80,7 +103,7 @@
 
         </div>
 
-        <!-- Scan History Section -->
+        <!-- HISTORY -->
         <div id="historySection" class="hidden">
             <h2>Scan History</h2>
             <table>
@@ -88,11 +111,16 @@
                     <tr>
                         <th>Scan Time</th>
                         <th>Risk Score</th>
+                        <th>CIS Score</th>
                         <th>Security Level</th>
                     </tr>
                 </thead>
                 <tbody id="historyTable"></tbody>
             </table>
+        </div>
+
+        <div class="footer">
+            © 2026 SecureCloud | Built by Umar Faisal
         </div>
 
     </div>
