@@ -1,126 +1,102 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Cloud Security Dashboard</title>
+    <title>Cloud Security Platform</title>
+    <link rel="stylesheet" href="/static/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 40px;
-            background: #f4f6f9;
-        }
-
-        h1 {
-            margin-bottom: 20px;
-        }
-
-        button {
-            padding: 10px 20px;
-            background: #3498db;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            margin-bottom: 20px;
-        }
-
-        button:hover {
-            background: #2980b9;
-        }
-
-        .card {
-            background: white;
-            padding: 20px;
-            margin-bottom: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-        }
-
-        .risk {
-            font-size: 22px;
-            font-weight: bold;
-        }
-
-        .charts {
-            display: flex;
-            gap: 40px;
-            flex-wrap: wrap;
-        }
-
-        .chart-box {
-            width: 400px;
-            height: 400px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th, td {
-            padding: 10px;
-            border-bottom: 1px solid #ddd;
-        }
-
-        th {
-            background: #222;
-            color: white;
-        }
-
-        .risk-bar-container {
-            background: #ddd;
-            border-radius: 10px;
-            overflow: hidden;
-            margin-top: 10px;
-        }
-
-        .risk-bar {
-            height: 20px;
-            width: 0%;
-        }
-    </style>
 </head>
 <body>
 
-<h1>☁️ Cloud Security Dashboard</h1>
+<div class="app">
 
-<button onclick="triggerScan()">Run Scan</button>
-
-<div class="card">
-    <div>Total Issues: <span id="total"></span></div>
-    <div class="risk">Risk Score: <span id="risk"></span></div>
-    <div>Security Level: <span id="level"></span></div>
-
-    <div class="risk-bar-container">
-        <div id="riskBar" class="risk-bar"></div>
-    </div>
-</div>
-
-<div class="card charts">
-    <div class="chart-box">
-        <canvas id="severityChart"></canvas>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h2>☁️ SecureCloud</h2>
+        <ul>
+            <li onclick="showDashboard()">Dashboard</li>
+            <li onclick="showHistory()">Scan History</li>
+        </ul>
     </div>
 
-    <div class="chart-box">
-        <canvas id="serviceChart"></canvas>
-    </div>
-</div>
+    <!-- Main Content -->
+    <div class="content">
 
-<div class="card">
-    <h3>Findings</h3>
-    <table>
-        <thead>
-            <tr>
-                <th>Service</th>
-                <th>Resource</th>
-                <th>Issue</th>
-                <th>Severity</th>
-                <th>Region</th>
-            </tr>
-        </thead>
-        <tbody id="findingsTable"></tbody>
-    </table>
+        <!-- Loader -->
+        <div id="loader" class="loader hidden">Scanning AWS Resources...</div>
+
+        <!-- Dashboard Section -->
+        <div id="dashboardSection">
+
+            <div class="top-bar">
+                <button onclick="triggerScan()">Run Scan</button>
+                <div>Last Scan: <span id="lastScan"></span></div>
+            </div>
+
+            <div class="cards">
+                <div class="card">
+                    <h3>Total Issues</h3>
+                    <p id="total"></p>
+                </div>
+                <div class="card">
+                    <h3>Risk Score</h3>
+                    <p id="risk"></p>
+                </div>
+                <div class="card">
+                    <h3>Security Level</h3>
+                    <p id="level"></p>
+                </div>
+            </div>
+
+            <div class="charts">
+                <canvas id="severityChart"></canvas>
+                <canvas id="serviceChart"></canvas>
+            </div>
+
+            <div class="filters">
+                <select id="severityFilter" onchange="loadDashboard()">
+                    <option value="">All Severities</option>
+                    <option value="CRITICAL">CRITICAL</option>
+                    <option value="HIGH">HIGH</option>
+                    <option value="MEDIUM">MEDIUM</option>
+                </select>
+
+                <input type="text" id="searchInput"
+                       placeholder="Search resource..."
+                       oninput="loadDashboard()">
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Service</th>
+                        <th>Resource</th>
+                        <th>Issue</th>
+                        <th>Severity</th>
+                        <th>Region</th>
+                    </tr>
+                </thead>
+                <tbody id="findingsTable"></tbody>
+            </table>
+
+        </div>
+
+        <!-- Scan History Section -->
+        <div id="historySection" class="hidden">
+            <h2>Scan History</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Scan Time</th>
+                        <th>Risk Score</th>
+                        <th>Security Level</th>
+                    </tr>
+                </thead>
+                <tbody id="historyTable"></tbody>
+            </table>
+        </div>
+
+    </div>
+
 </div>
 
 <script src="/static/script.js"></script>
