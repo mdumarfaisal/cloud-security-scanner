@@ -1,95 +1,84 @@
+let scanHistory = [];
+
+function showDashboard() {
+    document.getElementById("dashboardSection").classList.remove("hidden");
+    document.getElementById("historySection").classList.add("hidden");
+}
+
+function showHistory() {
+    document.getElementById("dashboardSection").classList.add("hidden");
+    document.getElementById("historySection").classList.remove("hidden");
+    loadHistory();
+}
+
 async function triggerScan() {
-    await fetch("/scan", { method: "POST" });
+    document.getElementById("loader").classList.remove("hidden");
+
+    const res = await fetch("/scan", { method: "POST" });
+    const data = await res.json();
+
+    scanHistory.push({
+        time: data.scan_time,
+        score: data.risk_score,
+        level: data.security_level
+    });
+
+    document.getElementById("loader").classList.add("hidden");
+
     loadDashboard();
 }
 
 async function loadDashboard() {
 
-    const reportRes = await fetch("/report");
-    const reportData = await reportRes.json();
+    const res = await fetch("/report");
+    const data = await res.json();
 
-    const summary = reportData.summary;
+    const severityFilter = document.getElementById("severityFilter").value;
+    const searchText = document.getElementById("searchInput").value.toLowerCase();
 
-    document.getElementById("risk").innerText = reportData.risk_score;
-    document.getElementById("level").innerText = reportData.security_level;
+    document.getElementById("total").innerText =
+        data.summary.CRITICAL +
+        data.summary.HIGH +
+        data.summary.MEDIUM;
 
-    const totalIssues =
-        summary.CRITICAL + summary.HIGH + summary.MEDIUM;
+    document.getElementById("risk").innerText = data.risk_score;
+    document.getElementById("level").innerText = data.security_level;
+    document.getElementById("lastScan").innerText = data.scan_time;
 
-    document.getElementById("total").innerText = totalIssues;
-
-    // 🔥 Risk Bar
-    const riskBar = document.getElementById("riskBar");
-    riskBar.style.width = reportData.risk_score + "%";
-
-    if (reportData.risk_score > 80) {
-        riskBar.style.background = "#2ecc71";
-    } else if (reportData.risk_score > 50) {
-        riskBar.style.background = "#f39c12";
-    } else {
-        riskBar.style.background = "#e74c3c";
-    }
-
-    // 🔴 Severity Pie Chart
-    new Chart(document.getElementById("severityChart"), {
-        type: "pie",
-        data: {
-            labels: ["CRITICAL", "HIGH", "MEDIUM"],
-            datasets: [{
-                data: [
-                    summary.CRITICAL,
-                    summary.HIGH,
-                    summary.MEDIUM
-                ],
-                backgroundColor: [
-                    "#e74c3c",
-                    "#f39c12",
-                    "#3498db"
-                ]
-            }]
-        }
-    });
-
-    // 🟢 Service-wise Distribution
-    const serviceCounts = {};
-
-    reportData.findings.forEach(f => {
-        serviceCounts[f.service] =
-            (serviceCounts[f.service] || 0) + 1;
-    });
-
-    new Chart(document.getElementById("serviceChart"), {
-        type: "bar",
-        data: {
-            labels: Object.keys(serviceCounts),
-            datasets: [{
-                label: "Issues per Service",
-                data: Object.values(serviceCounts),
-                backgroundColor: "#3498db"
-            }]
-        }
-    });
-
-    // 📋 Populate Findings Table
     const table = document.getElementById("findingsTable");
     table.innerHTML = "";
 
-    reportData.findings.forEach(f => {
-        const row = `
+    data.findings
+        .filter(f =>
+            (!severityFilter || f.severity === severityFilter) &&
+            (!searchText || f.resource.toLowerCase().includes(searchText))
+        )
+        .forEach(f => {
+            table.innerHTML += `
+                <tr>
+                    <td>${f.service}</td>
+                    <td>${f.resource}</td>
+                    <td>${f.issue}</td>
+                    <td>${f.severity}</td>
+                    <td>${f.region || "-"}</td>
+                </tr>
+            `;
+        });
+}
+
+function loadHistory() {
+    const table = document.getElementById("historyTable");
+    table.innerHTML = "";
+
+    scanHistory.forEach(h => {
+        table.innerHTML += `
             <tr>
-                <td>${f.service}</td>
-                <td>${f.resource}</td>
-                <td>${f.issue}</td>
-                <td>${f.severity}</td>
-                <td>${f.region || "-"}</td>
+                <td>${h.time}</td>
+                <td>${h.score}</td>
+                <td>${h.level}</td>
             </tr>
         `;
-        table.innerHTML += row;
     });
 }
 
-// Load dashboard initially
 loadDashboard();
-
-// Auto refresh every 30 seconds
-setInterval(loadDashboard, 30000);
