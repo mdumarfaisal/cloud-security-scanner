@@ -36,6 +36,18 @@ async function loadDashboard() {
     const severityFilter = document.getElementById("severityFilter").value;
     const searchText = document.getElementById("searchInput").value.toLowerCase();
 
+
+    const level = document.getElementById("level");
+    if (data.security_level === "LOW RISK") {
+        level.style.color = "#2ecc71";
+    }
+    else if (data.security_level === "MODERATE RISK") {
+        level.style.color = "#f39c12";
+    }
+    else {
+        level.style.color = "#e74c3c";
+    }
+
     document.getElementById("total").innerText =
         data.summary.CRITICAL +
         data.summary.HIGH +
