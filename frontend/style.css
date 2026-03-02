@@ -207,3 +207,10 @@ tr:hover {
 .info-icon:hover::after {
     opacity: 1;
 }
+
+
+/* Severity Colors */
+
+.severity-critical { background:#fdecea; }
+.severity-high { background:#fff6e5; }
+.severity-medium { background:#eaf3ff; }
