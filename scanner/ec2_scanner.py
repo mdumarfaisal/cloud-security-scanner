@@ -1,16 +1,17 @@
 import boto3
 from botocore.exceptions import ClientError
 from scanner.utils import get_all_regions
+from scanner.utils import create_finding
 
 
-def create_finding(service, resource, issue, severity, region=None):
-    return {
-        "service": service,
-        "resource": resource,
-        "issue": issue,
-        "severity": severity,
-        "region": region
-    }
+# def create_finding(service, resource, issue, severity, region=None):
+#     return {
+#         "service": service,
+#         "resource": resource,
+#         "issue": issue,
+#         "severity": severity,
+#         "region": region
+#     }
 
 
 def scan_ec2():

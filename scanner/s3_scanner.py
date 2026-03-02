@@ -1,17 +1,18 @@
 import boto3
 import json
 from botocore.exceptions import ClientError
+from scanner.utils import create_finding
 
 s3 = boto3.client("s3")
 
 
-def create_finding(service, resource, issue, severity):
-    return {
-        "service": service,
-        "resource": resource,
-        "issue": issue,
-        "severity": severity
-    }
+# def create_finding(service, resource, issue, severity):
+#     return {
+#         "service": service,
+#         "resource": resource,
+#         "issue": issue,
+#         "severity": severity
+#     }
 
 
 def scan_s3():
