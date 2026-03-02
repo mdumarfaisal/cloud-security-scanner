@@ -196,8 +196,8 @@ function updateCISBreakdown(summary) {
         const percentage = Math.max(0, 100 - (c.value * 10));
         const color =
             percentage > 80 ? "#2ecc71" :
-            percentage > 50 ? "#f39c12" :
-            "#e74c3c";
+                percentage > 50 ? "#f39c12" :
+                    "#e74c3c";
 
         const wrapper = document.createElement("div");
         wrapper.className = "progress-wrapper";
@@ -215,6 +215,18 @@ function updateCISBreakdown(summary) {
     });
 }
 
+
+
+function showRecommendation(text) {
+    if (!text) return; 
+    document.getElementById("modalText").innerText = text;
+    document.getElementById("recommendationModal").classList.add("show");
+}
+
+function closeModal() {
+    document.getElementById("recommendationModal").classList.remove("show");
+}
+
 // ================================
 // FINDINGS TABLE
 // ================================
@@ -222,6 +234,8 @@ function populateTable(data) {
     const severityFilter = document.getElementById("severityFilter").value;
     const searchText = document.getElementById("searchInput").value.toLowerCase();
     const table = document.getElementById("findingsTable");
+
+    
 
     table.innerHTML = "";
 
@@ -239,10 +253,19 @@ function populateTable(data) {
             <td>${f.issue}</td>
             <td>${getSeverityBadge(f.severity)}</td>
             <td>${f.region || "-"}</td>
+            <td>
+            <button class="view-btn"
+             data-recommendation="${encodeURIComponent(f.recommendation)}">
+            View
+            </button>
+            </td>
+            
         `;
 
         table.appendChild(row);
     });
+
+    
 }
 
 function getSeverityBadge(severity) {
@@ -274,6 +297,10 @@ function updateHistory(data, cisScore) {
     scanHistory = scanHistory.slice(0, 10);
     localStorage.setItem("scanHistory", JSON.stringify(scanHistory));
 }
+
+
+
+
 
 function loadHistory() {
     const table = document.getElementById("historyTable");
@@ -317,8 +344,23 @@ function animateValue(id, end, duration = 800) {
     requestAnimationFrame(animation);
 }
 
+
+
+// Attach click listener ONCE (event delegation)
+document.getElementById("findingsTable").addEventListener("click", function(e) {
+    if (e.target.classList.contains("view-btn")) {
+        const text = decodeURIComponent(e.target.dataset.recommendation);
+        showRecommendation(text);
+    }
+});
+
+// AUTO REFRESH
+setInterval(loadDashboard, 30000);
+loadDashboard();
 // ================================
 // AUTO REFRESH
 // ================================
+
+
 setInterval(loadDashboard, 30000);
 loadDashboard();
