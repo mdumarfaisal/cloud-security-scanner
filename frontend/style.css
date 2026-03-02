@@ -214,3 +214,33 @@ tr:hover {
 .severity-critical { background:#fdecea; }
 .severity-high { background:#fff6e5; }
 .severity-medium { background:#eaf3ff; }
+
+
+
+
+.hidden { display: none; }
+
+.active {
+    border-bottom: 3px solid #4da3ff;
+    font-weight: bold;
+}
+
+.severity-badge {
+    color: white;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+}
+
+.progress-bar {
+    background: #eee;
+    height: 8px;
+    border-radius: 6px;
+    margin-top: 6px;
+}
+
+.progress-fill {
+    height: 8px;
+    border-radius: 6px;
+    transition: width 0.5s ease;
+}
