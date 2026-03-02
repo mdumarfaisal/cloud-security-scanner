@@ -1,6 +1,10 @@
 let scanHistory = JSON.parse(localStorage.getItem("scanHistory")) || [];
 let severityChart, serviceChart;
 
+// ==========================
+// NAVIGATION
+// ==========================
+
 function showDashboard() {
     document.getElementById("dashboardSection").classList.remove("hidden");
     document.getElementById("historySection").classList.add("hidden");
@@ -23,6 +27,10 @@ function setActive(section) {
     else
         document.getElementById("navHistory").classList.add("active");
 }
+
+// ==========================
+// SCAN
+// ==========================
 
 async function triggerScan() {
     document.getElementById("loader").classList.remove("hidden");
@@ -51,14 +59,9 @@ async function triggerScan() {
     loadDashboard();
 }
 
-function calculateCISScore(summary) {
-    const penalty =
-        (summary.CRITICAL * 10) +
-        (summary.HIGH * 6) +
-        (summary.MEDIUM * 3);
-
-    return Math.max(0, 100 - penalty);
-}
+// ==========================
+// DASHBOARD LOAD
+// ==========================
 
 async function loadDashboard() {
     const res = await fetch("/report");
@@ -84,16 +87,61 @@ async function loadDashboard() {
     populateTable(data);
 }
 
-function colorSecurityCard(level) {
-    const card = document.getElementById("securityCard");
+// ==========================
+// TABLE (FINDINGS)
+// ==========================
 
-    if (level === "LOW RISK")
-        card.style.background = "#eafaf1";
-    else if (level === "MODERATE RISK")
-        card.style.background = "#fdf2e9";
-    else
-        card.style.background = "#fdecea";
+function populateTable(data) {
+    const severityFilter = document.getElementById("severityFilter").value;
+    const searchText = document.getElementById("searchInput").value.toLowerCase();
+    const table = document.getElementById("findingsTable");
+    table.innerHTML = "";
+
+    data.findings
+        .filter(f =>
+            (!severityFilter || f.severity === severityFilter) &&
+            (!searchText || f.resource.toLowerCase().includes(searchText))
+        )
+        .forEach(f => {
+
+            const rowClass = `severity-${f.severity.toLowerCase()}`;
+
+            table.innerHTML += `
+                <tr class="${rowClass}">
+                    <td>${f.service}</td>
+                    <td>${f.resource}</td>
+                    <td>${f.issue}</td>
+                    <td>${getSeverityBadge(f.severity)}</td>
+                    <td>${f.region || "-"}</td>
+                </tr>
+            `;
+        });
 }
+
+// ==========================
+// SEVERITY BADGE
+// ==========================
+
+function getSeverityBadge(severity) {
+    const colors = {
+        CRITICAL: "#e74c3c",
+        HIGH: "#f39c12",
+        MEDIUM: "#3498db"
+    };
+
+    return `<span style="
+        background:${colors[severity]};
+        color:white;
+        padding:4px 10px;
+        border-radius:20px;
+        font-size:12px;">
+        ${severity}
+    </span>`;
+}
+
+// ==========================
+// CHARTS
+// ==========================
 
 function updateCharts(data) {
 
@@ -141,6 +189,19 @@ function updateCharts(data) {
     });
 }
 
+// ==========================
+// CIS SCORE
+// ==========================
+
+function calculateCISScore(summary) {
+    const penalty =
+        (summary.CRITICAL * 10) +
+        (summary.HIGH * 6) +
+        (summary.MEDIUM * 3);
+
+    return Math.max(0, 100 - penalty);
+}
+
 function updateCISBreakdown(summary) {
     const container = document.getElementById("cisBreakdown");
     container.innerHTML = "";
@@ -173,46 +234,9 @@ function updateCISBreakdown(summary) {
     });
 }
 
-function populateTable(data) {
-    const severityFilter = document.getElementById("severityFilter").value;
-    const searchText = document.getElementById("searchInput").value.toLowerCase();
-    const table = document.getElementById("findingsTable");
-    table.innerHTML = "";
-
-    data.findings
-        .filter(f =>
-            (!severityFilter || f.severity === severityFilter) &&
-            (!searchText || f.resource.toLowerCase().includes(searchText))
-        )
-        .forEach(f => {
-            table.innerHTML += `
-                <tr>
-                    <td>${f.service}</td>
-                    <td>${f.resource}</td>
-                    <td>${f.issue}</td>
-                    <td>${getSeverityBadge(f.severity)}</td>
-                    <td>${f.region || "-"}</td>
-                </tr>
-            `;
-        });
-}
-
-function getSeverityBadge(severity) {
-    const colors = {
-        CRITICAL: "#e74c3c",
-        HIGH: "#f39c12",
-        MEDIUM: "#3498db"
-    };
-
-    return `<span style="
-        background:${colors[severity]};
-        color:white;
-        padding:4px 10px;
-        border-radius:20px;
-        font-size:12px;">
-        ${severity}
-    </span>`;
-}
+// ==========================
+// HISTORY
+// ==========================
 
 function loadHistory() {
     const table = document.getElementById("historyTable");
@@ -229,6 +253,10 @@ function loadHistory() {
         `;
     });
 }
+
+// ==========================
+// ANIMATION
+// ==========================
 
 function animateValue(id, end, duration = 600) {
     let start = 0;
@@ -247,5 +275,6 @@ function animateValue(id, end, duration = 600) {
     requestAnimationFrame(animation);
 }
 
+// Auto refresh every 30s
 setInterval(loadDashboard, 30000);
 loadDashboard();
