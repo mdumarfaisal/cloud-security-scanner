@@ -1,56 +1,70 @@
+// ================================
+// GLOBAL STATE
+// ================================
 let scanHistory = JSON.parse(localStorage.getItem("scanHistory")) || [];
-let severityChart, serviceChart;
+let severityChart = null;
+let serviceChart = null;
 
+// ================================
+// NAVIGATION
+// ================================
 function showDashboard() {
-    document.getElementById("dashboardSection").classList.remove("hidden");
-    document.getElementById("historySection").classList.add("hidden");
-    setActive("dashboard");
-}
-
-function showHistory() {
-    document.getElementById("dashboardSection").classList.add("hidden");
-    document.getElementById("historySection").classList.remove("hidden");
-    setActive("history");
-    loadHistory();
-}
-
-function setActive(section) {
-    document.getElementById("navDashboard").classList.remove("active");
-    document.getElementById("navHistory").classList.remove("active");
-
-    if (section === "dashboard")
-        document.getElementById("navDashboard").classList.add("active");
-    else
-        document.getElementById("navHistory").classList.add("active");
-}
-
-async function triggerScan() {
-    document.getElementById("loader").classList.remove("hidden");
-    document.getElementById("statusIndicator").style.color = "#f39c12";
-    document.getElementById("statusIndicator").innerText = "● Scanning...";
-
-    const res = await fetch("/scan", { method: "POST" });
-    const data = await res.json();
-
-    const cisScore = calculateCISScore(data.summary);
-
-    scanHistory.unshift({
-        time: data.scan_time,
-        score: data.risk_score,
-        cis: cisScore,
-        level: data.security_level
-    });
-
-    scanHistory = scanHistory.slice(0, 10);
-    localStorage.setItem("scanHistory", JSON.stringify(scanHistory));
-
-    document.getElementById("loader").classList.add("hidden");
-    document.getElementById("statusIndicator").style.color = "#2ecc71";
-    document.getElementById("statusIndicator").innerText = "● Live";
-
+    toggleSection("dashboard");
     loadDashboard();
 }
 
+function showHistory() {
+    toggleSection("history");
+    loadHistory();
+}
+
+function toggleSection(section) {
+    const dashboard = document.getElementById("dashboardSection");
+    const history = document.getElementById("historySection");
+
+    dashboard.classList.toggle("hidden", section !== "dashboard");
+    history.classList.toggle("hidden", section !== "history");
+
+    document.getElementById("navDashboard").classList.toggle("active", section === "dashboard");
+    document.getElementById("navHistory").classList.toggle("active", section === "history");
+}
+
+// ================================
+// SCAN TRIGGER
+// ================================
+async function triggerScan() {
+    try {
+        setStatus("Scanning...", "#f39c12", true);
+
+        const res = await fetch("/scan", { method: "POST" });
+        if (!res.ok) throw new Error("Scan failed");
+
+        const data = await res.json();
+        const cisScore = calculateCISScore(data.summary);
+
+        updateHistory(data, cisScore);
+        loadDashboard();
+
+        setStatus("Live", "#2ecc71", false);
+    } catch (err) {
+        console.error(err);
+        setStatus("Scan Failed", "#e74c3c", false);
+        alert("Scan failed. Please try again.");
+    }
+}
+
+function setStatus(text, color, loading) {
+    const loader = document.getElementById("loader");
+    const indicator = document.getElementById("statusIndicator");
+
+    loader.classList.toggle("hidden", !loading);
+    indicator.style.color = color;
+    indicator.innerText = `● ${text}`;
+}
+
+// ================================
+// SCORE CALCULATION
+// ================================
 function calculateCISScore(summary) {
     const penalty =
         (summary.CRITICAL * 10) +
@@ -60,46 +74,63 @@ function calculateCISScore(summary) {
     return Math.max(0, 100 - penalty);
 }
 
+// ================================
+// DASHBOARD LOADING
+// ================================
 async function loadDashboard() {
-    const res = await fetch("/report");
-    const data = await res.json();
+    try {
+        const res = await fetch("/report");
+        if (!res.ok) throw new Error("Report fetch failed");
 
-    const cisScore = calculateCISScore(data.summary);
+        const data = await res.json();
+        const cisScore = calculateCISScore(data.summary);
 
-    animateValue("risk", data.risk_score);
-    animateValue("cisScore", cisScore);
+        animateValue("risk", data.risk_score);
+        animateValue("cisScore", cisScore);
 
-    document.getElementById("total").innerText =
-        data.summary.CRITICAL +
-        data.summary.HIGH +
-        data.summary.MEDIUM;
+        document.getElementById("total").innerText =
+            data.summary.CRITICAL +
+            data.summary.HIGH +
+            data.summary.MEDIUM;
 
-    document.getElementById("level").innerText = data.security_level;
-    document.getElementById("lastScan").innerText =
-        new Date(data.scan_time).toLocaleString();
+        document.getElementById("level").innerText = data.security_level;
+        document.getElementById("lastScan").innerText =
+            new Date(data.scan_time).toLocaleString();
 
-    colorSecurityCard(data.security_level);
-    updateCharts(data);
-    updateCISBreakdown(data.summary);
-    populateTable(data);
+        colorSecurityCard(data.security_level);
+        updateCharts(data);
+        updateCISBreakdown(data.summary);
+        populateTable(data);
+
+    } catch (err) {
+        console.error(err);
+    }
 }
 
+// ================================
+// SECURITY CARD COLOR
+// ================================
 function colorSecurityCard(level) {
     const card = document.getElementById("securityCard");
 
-    if (level === "LOW RISK")
-        card.style.background = "#eafaf1";
-    else if (level === "MODERATE RISK")
-        card.style.background = "#fdf2e9";
-    else
-        card.style.background = "#fdecea";
+    const colors = {
+        "LOW RISK": "#eafaf1",
+        "MODERATE RISK": "#fff4e6",
+        "HIGH RISK": "#fdecea"
+    };
+
+    card.style.background = colors[level] || "#ffffff";
 }
 
+// ================================
+// CHARTS
+// ================================
 function updateCharts(data) {
 
     if (severityChart) severityChart.destroy();
     if (serviceChart) serviceChart.destroy();
 
+    // Severity Chart
     severityChart = new Chart(
         document.getElementById("severityChart"), {
         type: "doughnut",
@@ -115,15 +146,18 @@ function updateCharts(data) {
             }]
         },
         options: {
-            cutout: "60%",
-            plugins: { legend: { position: "bottom" } }
+            responsive: true,
+            cutout: "65%",
+            plugins: {
+                legend: { position: "bottom" }
+            }
         }
     });
 
+    // Service Chart
     const serviceCounts = {};
     data.findings.forEach(f => {
-        serviceCounts[f.service] =
-            (serviceCounts[f.service] || 0) + 1;
+        serviceCounts[f.service] = (serviceCounts[f.service] || 0) + 1;
     });
 
     serviceChart = new Chart(
@@ -134,13 +168,20 @@ function updateCharts(data) {
             datasets: [{
                 label: "Issues per Service",
                 data: Object.values(serviceCounts),
+                borderRadius: 6,
                 backgroundColor: "#4da3ff"
             }]
         },
-        options: { plugins: { legend: { display: false } } }
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } }
+        }
     });
 }
 
+// ================================
+// CIS BREAKDOWN
+// ================================
 function updateCISBreakdown(summary) {
     const container = document.getElementById("cisBreakdown");
     container.innerHTML = "";
@@ -153,48 +194,78 @@ function updateCISBreakdown(summary) {
 
     controls.forEach(c => {
         const percentage = Math.max(0, 100 - (c.value * 10));
-        const color = percentage > 80 ? "#2ecc71" :
-                      percentage > 50 ? "#f39c12" :
-                      "#e74c3c";
+        const color =
+            percentage > 80 ? "#2ecc71" :
+                percentage > 50 ? "#f39c12" :
+                    "#e74c3c";
 
-        container.innerHTML += `
-            <div style="margin-bottom:15px;">
-                <strong>${c.name}</strong>
-                <div style="background:#eee; height:10px; border-radius:5px; margin-top:5px;">
-                    <div style="
-                        width:${percentage}%;
-                        height:10px;
-                        background:${color};
-                        border-radius:5px;">
-                    </div>
+        const wrapper = document.createElement("div");
+        wrapper.className = "progress-wrapper";
+
+        wrapper.innerHTML = `
+            <strong>${c.name}</strong>
+            <div class="progress-bar">
+                <div class="progress-fill"
+                     style="width:${percentage}%; background:${color}">
                 </div>
             </div>
         `;
+
+        container.appendChild(wrapper);
     });
 }
 
+
+
+function showRecommendation(text) {
+    if (!text) return; 
+    document.getElementById("modalText").innerText = text;
+    document.getElementById("recommendationModal").classList.add("show");
+}
+
+function closeModal() {
+    document.getElementById("recommendationModal").classList.remove("show");
+}
+
+// ================================
+// FINDINGS TABLE
+// ================================
 function populateTable(data) {
     const severityFilter = document.getElementById("severityFilter").value;
     const searchText = document.getElementById("searchInput").value.toLowerCase();
     const table = document.getElementById("findingsTable");
+
+    
+
     table.innerHTML = "";
 
-    data.findings
-        .filter(f =>
-            (!severityFilter || f.severity === severityFilter) &&
-            (!searchText || f.resource.toLowerCase().includes(searchText))
-        )
-        .forEach(f => {
-            table.innerHTML += `
-                <tr>
-                    <td>${f.service}</td>
-                    <td>${f.resource}</td>
-                    <td>${f.issue}</td>
-                    <td>${getSeverityBadge(f.severity)}</td>
-                    <td>${f.region || "-"}</td>
-                </tr>
-            `;
-        });
+    const filtered = data.findings.filter(f =>
+        (!severityFilter || f.severity === severityFilter) &&
+        (!searchText || f.resource.toLowerCase().includes(searchText))
+    );
+
+    filtered.forEach(f => {
+        const row = document.createElement("tr");
+
+        row.innerHTML = `
+            <td>${f.service}</td>
+            <td>${f.resource}</td>
+            <td>${f.issue}</td>
+            <td>${getSeverityBadge(f.severity)}</td>
+            <td>${f.region || "-"}</td>
+            <td>
+            <button class="view-btn"
+             data-recommendation="${encodeURIComponent(f.recommendation)}">
+            View
+            </button>
+            </td>
+            
+        `;
+
+        table.appendChild(row);
+    });
+
+    
 }
 
 function getSeverityBadge(severity) {
@@ -204,48 +275,92 @@ function getSeverityBadge(severity) {
         MEDIUM: "#3498db"
     };
 
-    return `<span style="
-        background:${colors[severity]};
-        color:white;
-        padding:4px 10px;
-        border-radius:20px;
-        font-size:12px;">
-        ${severity}
-    </span>`;
+    return `
+        <span class="severity-badge"
+              style="background:${colors[severity] || "#999"}">
+              ${severity}
+        </span>
+    `;
 }
+
+// ================================
+// HISTORY
+// ================================
+function updateHistory(data, cisScore) {
+    scanHistory.unshift({
+        time: data.scan_time,
+        score: data.risk_score,
+        cis: cisScore,
+        level: data.security_level
+    });
+
+    scanHistory = scanHistory.slice(0, 10);
+    localStorage.setItem("scanHistory", JSON.stringify(scanHistory));
+}
+
+
+
+
 
 function loadHistory() {
     const table = document.getElementById("historyTable");
     table.innerHTML = "";
 
     scanHistory.forEach(h => {
-        table.innerHTML += `
-            <tr>
-                <td>${new Date(h.time).toLocaleString()}</td>
-                <td>${h.score}</td>
-                <td>${h.cis}</td>
-                <td>${h.level}</td>
-            </tr>
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <td>${new Date(h.time).toLocaleString()}</td>
+            <td>${h.score}</td>
+            <td>${h.cis}</td>
+            <td>${h.level}</td>
         `;
+        table.appendChild(row);
     });
 }
 
-function animateValue(id, end, duration = 600) {
+// ================================
+// ANIMATION
+// ================================
+function animateValue(id, end, duration = 800) {
     let start = 0;
     let startTime = null;
 
     function animation(currentTime) {
         if (!startTime) startTime = currentTime;
+
         const progress = currentTime - startTime;
-        const value = Math.min(Math.floor((progress / duration) * end), end);
+        const value = Math.min(
+            Math.floor((progress / duration) * end),
+            end
+        );
+
         document.getElementById(id).innerText = value;
 
-        if (progress < duration)
+        if (progress < duration) {
             requestAnimationFrame(animation);
+        }
     }
 
     requestAnimationFrame(animation);
 }
+
+
+
+// Attach click listener ONCE (event delegation)
+document.getElementById("findingsTable").addEventListener("click", function(e) {
+    if (e.target.classList.contains("view-btn")) {
+        const text = decodeURIComponent(e.target.dataset.recommendation);
+        showRecommendation(text);
+    }
+});
+
+// AUTO REFRESH
+setInterval(loadDashboard, 30000);
+loadDashboard();
+// ================================
+// AUTO REFRESH
+// ================================
+
 
 setInterval(loadDashboard, 30000);
 loadDashboard();

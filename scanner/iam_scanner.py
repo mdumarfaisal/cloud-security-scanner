@@ -1,16 +1,18 @@
 import boto3
 from botocore.exceptions import ClientError
+from scanner.utils import create_finding
+
 
 iam = boto3.client("iam")
 
 
-def create_finding(service, resource, issue, severity):
-    return {
-        "service": service,
-        "resource": resource,
-        "issue": issue,
-        "severity": severity
-    }
+# def create_finding(service, resource, issue, severity):
+#     return {
+#         "service": service,
+#         "resource": resource,
+#         "issue": issue,
+#         "severity": severity
+#     }
 
 
 def scan_iam():

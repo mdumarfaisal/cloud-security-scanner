@@ -2,6 +2,8 @@
 <html>
 
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SecureCloud Platform</title>
     <link rel="stylesheet" href="/static/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -30,7 +32,7 @@
                 <div class="top-bar">
                     <button onclick="triggerScan()">Run Scan</button>
                     <div>
-                        Status: <span id="statusIndicator" style="color:#2ecc71">● Live</span><br>
+                        Status: <span id="statusIndicator">● Live</span><br>
                         Last Scan: <span id="lastScan"></span>
                     </div>
                 </div>
@@ -73,9 +75,11 @@
                 <!-- Charts -->
                 <div class="charts">
                     <div class="chart-box">
+                        <h3>Severity Distribution</h3>
                         <canvas id="severityChart"></canvas>
                     </div>
                     <div class="chart-box">
+                        <h3>Issues by Service</h3>
                         <canvas id="serviceChart"></canvas>
                     </div>
                 </div>
@@ -107,6 +111,7 @@
                             <th>Issue</th>
                             <th>Severity</th>
                             <th>Region</th>
+                            <th>Recommendation</th>
                         </tr>
                     </thead>
                     <tbody id="findingsTable"></tbody>
@@ -136,6 +141,22 @@
 
         </div>
     </div>
+
+
+
+    <!-- Recommendation Modal -->
+<div id="recommendationModal" class="modal hidden">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Security Recommendation</h3>
+            <span class="close-btn" onclick="closeModal()">×</span>
+        </div>
+        <div class="modal-body" id="modalText"></div>
+        <div class="modal-footer">
+            <button onclick="closeModal()">Close</button>
+        </div>
+    </div>
+</div>
 
     <script src="/static/script.js"></script>
 </body>
