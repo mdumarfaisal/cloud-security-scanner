@@ -1,13 +1,7 @@
-// ================================
-// GLOBAL STATE
-// ================================
 let scanHistory = JSON.parse(localStorage.getItem("scanHistory")) || [];
 let severityChart = null;
 let serviceChart = null;
 
-// ================================
-// NAVIGATION
-// ================================
 function showDashboard() {
     toggleSection("dashboard");
     loadDashboard();
@@ -19,52 +13,48 @@ function showHistory() {
 }
 
 function toggleSection(section) {
-    const dashboard = document.getElementById("dashboardSection");
-    const history = document.getElementById("historySection");
+    const isDashboard = section === "dashboard";
 
-    dashboard.classList.toggle("hidden", section !== "dashboard");
-    history.classList.toggle("hidden", section !== "history");
+    document.getElementById("dashboardSection").classList.toggle("hidden", !isDashboard);
+    document.getElementById("historySection").classList.toggle("hidden", isDashboard);
 
-    document.getElementById("navDashboard").classList.toggle("active", section === "dashboard");
-    document.getElementById("navHistory").classList.toggle("active", section === "history");
+    document.getElementById("navDashboard").classList.toggle("active", isDashboard);
+    document.getElementById("navHistory").classList.toggle("active", !isDashboard);
+    document.getElementById("mobileNavDashboard").classList.toggle("active", isDashboard);
+    document.getElementById("mobileNavHistory").classList.toggle("active", !isDashboard);
 }
 
-// ================================
-// SCAN TRIGGER
-// ================================
 async function triggerScan() {
     try {
-        setStatus("Scanning...", "#f39c12", true);
+        setStatus("Scanning", "loading", true);
 
-        const res = await fetch("/scan", { method: "POST" });
-        if (!res.ok) throw new Error("Scan failed");
+        const response = await fetch("/scan", { method: "POST" });
+        if (!response.ok) {
+            throw new Error("Scan failed");
+        }
 
-        const data = await res.json();
+        const data = await response.json();
         const cisScore = calculateCISScore(data.summary);
 
         updateHistory(data, cisScore);
-        loadDashboard();
-
-        setStatus("Live", "#2ecc71", false);
-    } catch (err) {
-        console.error(err);
-        setStatus("Scan Failed", "#e74c3c", false);
+        renderDashboard(data, cisScore);
+        setStatus("Live", "live", false);
+    } catch (error) {
+        console.error(error);
+        setStatus("Scan Failed", "error", false);
         alert("Scan failed. Please try again.");
     }
 }
 
-function setStatus(text, color, loading) {
+function setStatus(text, variant, loading) {
     const loader = document.getElementById("loader");
     const indicator = document.getElementById("statusIndicator");
 
     loader.classList.toggle("hidden", !loading);
-    indicator.style.color = color;
-    indicator.innerText = `● ${text}`;
+    indicator.className = `status-pill status-${variant}`;
+    indicator.textContent = text;
 }
 
-// ================================
-// SCORE CALCULATION
-// ================================
 function calculateCISScore(summary) {
     const penalty =
         (summary.CRITICAL * 10) +
@@ -74,140 +64,164 @@ function calculateCISScore(summary) {
     return Math.max(0, 100 - penalty);
 }
 
-// ================================
-// DASHBOARD LOADING
-// ================================
 async function loadDashboard() {
     try {
-        const res = await fetch("/report");
-        if (!res.ok) throw new Error("Report fetch failed");
+        const response = await fetch("/report");
+        if (!response.ok) {
+            throw new Error("Report fetch failed");
+        }
 
-        const data = await res.json();
+        const data = await response.json();
         const cisScore = calculateCISScore(data.summary);
-
-        animateValue("risk", data.risk_score);
-        animateValue("cisScore", cisScore);
-
-        document.getElementById("total").innerText =
-            data.summary.CRITICAL +
-            data.summary.HIGH +
-            data.summary.MEDIUM;
-
-        document.getElementById("level").innerText = data.security_level;
-        document.getElementById("lastScan").innerText =
-            new Date(data.scan_time).toLocaleString();
-
-        colorSecurityCard(data.security_level);
-        updateCharts(data);
-        updateCISBreakdown(data.summary);
-        populateTable(data);
-
-    } catch (err) {
-        console.error(err);
+        renderDashboard(data, cisScore);
+        setStatus("Live", "live", false);
+    } catch (error) {
+        console.error(error);
+        setStatus("Unavailable", "error", false);
     }
 }
 
-// ================================
-// SECURITY CARD COLOR
-// ================================
-function colorSecurityCard(level) {
-    const card = document.getElementById("securityCard");
+function renderDashboard(data, cisScore) {
+    animateValue("risk", data.risk_score);
+    animateValue("cisScore", cisScore);
 
-    const colors = {
-        "LOW RISK": "#eafaf1",
-        "MODERATE RISK": "#fff4e6",
-        "HIGH RISK": "#fdecea"
-    };
+    document.getElementById("total").textContent =
+        data.summary.CRITICAL + data.summary.HIGH + data.summary.MEDIUM;
 
-    card.style.background = colors[level] || "#ffffff";
+    document.getElementById("level").textContent = data.security_level || "-";
+    document.getElementById("lastScan").textContent = formatTimestamp(data.scan_time);
+
+    colorSecurityCard(data.security_level);
+    updateCharts(data);
+    updateCISBreakdown(data.summary);
+    populateTable(data);
 }
 
-// ================================
-// CHARTS
-// ================================
+function colorSecurityCard(level) {
+    const card = document.getElementById("securityCard");
+    card.classList.remove("level-low", "level-moderate", "level-high");
+
+    const map = {
+        "LOW RISK": "level-low",
+        "MODERATE RISK": "level-moderate",
+        "HIGH RISK": "level-high"
+    };
+
+    if (map[level]) {
+        card.classList.add(map[level]);
+    }
+}
+
 function updateCharts(data) {
+    if (severityChart) {
+        severityChart.destroy();
+    }
 
-    if (severityChart) severityChart.destroy();
-    if (serviceChart) serviceChart.destroy();
+    if (serviceChart) {
+        serviceChart.destroy();
+    }
 
-    // Severity Chart
-    severityChart = new Chart(
-        document.getElementById("severityChart"), {
+    severityChart = new Chart(document.getElementById("severityChart"), {
         type: "doughnut",
         data: {
-            labels: ["CRITICAL", "HIGH", "MEDIUM"],
+            labels: ["Critical", "High", "Medium"],
             datasets: [{
                 data: [
                     data.summary.CRITICAL,
                     data.summary.HIGH,
                     data.summary.MEDIUM
                 ],
-                backgroundColor: ["#e74c3c", "#f39c12", "#3498db"]
+                backgroundColor: ["#d84b53", "#d97a18", "#3c78d8"],
+                borderWidth: 0,
+                hoverOffset: 6
             }]
         },
         options: {
             responsive: true,
-            cutout: "65%",
+            cutout: "68%",
             plugins: {
-                legend: { position: "bottom" }
+                legend: {
+                    position: "bottom",
+                    labels: {
+                        usePointStyle: true,
+                        boxWidth: 10,
+                        padding: 18
+                    }
+                }
             }
         }
     });
 
-    // Service Chart
     const serviceCounts = {};
-    data.findings.forEach(f => {
-        serviceCounts[f.service] = (serviceCounts[f.service] || 0) + 1;
+    data.findings.forEach((finding) => {
+        const key = finding.service || "Unknown";
+        serviceCounts[key] = (serviceCounts[key] || 0) + 1;
     });
 
-    serviceChart = new Chart(
-        document.getElementById("serviceChart"), {
+    const labels = Object.keys(serviceCounts);
+    const values = Object.values(serviceCounts);
+
+    serviceChart = new Chart(document.getElementById("serviceChart"), {
         type: "bar",
         data: {
-            labels: Object.keys(serviceCounts),
+            labels,
             datasets: [{
-                label: "Issues per Service",
-                data: Object.values(serviceCounts),
-                borderRadius: 6,
-                backgroundColor: "#4da3ff"
+                label: "Issues per service",
+                data: values,
+                borderRadius: 10,
+                backgroundColor: "#1f8fff",
+                maxBarThickness: 42
             }]
         },
         options: {
             responsive: true,
-            plugins: { legend: { display: false } }
+            scales: {
+                x: {
+                    grid: { display: false }
+                },
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        precision: 0
+                    }
+                }
+            },
+            plugins: {
+                legend: { display: false }
+            }
         }
     });
 }
 
-// ================================
-// CIS BREAKDOWN
-// ================================
 function updateCISBreakdown(summary) {
     const container = document.getElementById("cisBreakdown");
     container.innerHTML = "";
 
     const controls = [
-        { name: "IAM Controls", value: summary.HIGH },
-        { name: "S3 Controls", value: summary.CRITICAL },
-        { name: "EC2 Controls", value: summary.MEDIUM }
+        { name: "S3 Exposure", issues: summary.CRITICAL, weight: 12 },
+        { name: "IAM Hygiene", issues: summary.HIGH, weight: 9 },
+        { name: "EC2 Hardening", issues: summary.MEDIUM, weight: 6 }
     ];
 
-    controls.forEach(c => {
-        const percentage = Math.max(0, 100 - (c.value * 10));
-        const color =
-            percentage > 80 ? "#2ecc71" :
-                percentage > 50 ? "#f39c12" :
-                    "#e74c3c";
+    controls.forEach((control) => {
+        const score = Math.max(0, 100 - (control.issues * control.weight));
+        const tone =
+            score >= 80 ? "#1e9e69" :
+            score >= 55 ? "#d97a18" :
+                "#d84b53";
 
         const wrapper = document.createElement("div");
         wrapper.className = "progress-wrapper";
-
         wrapper.innerHTML = `
-            <strong>${c.name}</strong>
-            <div class="progress-bar">
-                <div class="progress-fill"
-                     style="width:${percentage}%; background:${color}">
+            <div class="progress-meta">
+                <div>
+                    <strong>${control.name}</strong>
+                    <div>${control.issues} issue${control.issues === 1 ? "" : "s"} influencing this area</div>
                 </div>
+                <strong>${score}%</strong>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" style="width:${score}%; background:${tone};"></div>
             </div>
         `;
 
@@ -215,77 +229,66 @@ function updateCISBreakdown(summary) {
     });
 }
 
-
-
-function showRecommendation(text) {
-    if (!text) return; 
-    document.getElementById("modalText").innerText = text;
-    document.getElementById("recommendationModal").classList.add("show");
-}
-
-function closeModal() {
-    document.getElementById("recommendationModal").classList.remove("show");
-}
-
-// ================================
-// FINDINGS TABLE
-// ================================
 function populateTable(data) {
     const severityFilter = document.getElementById("severityFilter").value;
-    const searchText = document.getElementById("searchInput").value.toLowerCase();
+    const searchText = document.getElementById("searchInput").value.trim().toLowerCase();
     const table = document.getElementById("findingsTable");
-
-    
 
     table.innerHTML = "";
 
-    const filtered = data.findings.filter(f =>
-        (!severityFilter || f.severity === severityFilter) &&
-        (!searchText || f.resource.toLowerCase().includes(searchText))
-    );
-
-    filtered.forEach(f => {
-        const row = document.createElement("tr");
-
-        row.innerHTML = `
-            <td>${f.service}</td>
-            <td>${f.resource}</td>
-            <td>${f.issue}</td>
-            <td>${getSeverityBadge(f.severity)}</td>
-            <td>${f.region || "-"}</td>
-            <td>
-            <button class="view-btn"
-             data-recommendation="${encodeURIComponent(f.recommendation)}">
-            View
-            </button>
-            </td>
-            
-        `;
-
-        table.appendChild(row);
+    const filtered = data.findings.filter((finding) => {
+        const matchesSeverity = !severityFilter || finding.severity === severityFilter;
+        const haystack = `${finding.resource || ""} ${finding.issue || ""} ${finding.service || ""}`.toLowerCase();
+        const matchesSearch = !searchText || haystack.includes(searchText);
+        return matchesSeverity && matchesSearch;
     });
 
-    
+    if (!filtered.length) {
+        table.innerHTML = `
+            <tr class="empty-state">
+                <td colspan="6">
+                    <span class="empty-title">No findings match the current filters</span>
+                    Try another severity level or a broader search term.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    const severityRank = { CRITICAL: 0, HIGH: 1, MEDIUM: 2 };
+    filtered
+        .sort((a, b) => {
+            const severityDiff = (severityRank[a.severity] ?? 99) - (severityRank[b.severity] ?? 99);
+            if (severityDiff !== 0) {
+                return severityDiff;
+            }
+
+            return (a.service || "").localeCompare(b.service || "");
+        })
+        .forEach((finding) => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td>${escapeHtml(finding.service || "-")}</td>
+                <td class="resource-cell"><span class="truncate" title="${escapeAttribute(finding.resource || "-")}">${escapeHtml(finding.resource || "-")}</span></td>
+                <td class="issue-cell"><span class="truncate" title="${escapeAttribute(finding.issue || "-")}">${escapeHtml(finding.issue || "-")}</span></td>
+                <td>${getSeverityBadge(finding.severity)}</td>
+                <td>${escapeHtml(finding.region || "-")}</td>
+                <td>
+                    <button class="view-btn" type="button" data-recommendation="${encodeURIComponent(finding.recommendation || "No recommendation provided.")}">
+                        View
+                    </button>
+                </td>
+            `;
+
+            table.appendChild(row);
+        });
 }
 
 function getSeverityBadge(severity) {
-    const colors = {
-        CRITICAL: "#e74c3c",
-        HIGH: "#f39c12",
-        MEDIUM: "#3498db"
-    };
-
-    return `
-        <span class="severity-badge"
-              style="background:${colors[severity] || "#999"}">
-              ${severity}
-        </span>
-    `;
+    const variant = (severity || "").toLowerCase();
+    return `<span class="severity-badge severity-${variant}">${escapeHtml(severity || "Unknown")}</span>`;
 }
 
-// ================================
-// HISTORY
-// ================================
 function updateHistory(data, cisScore) {
     scanHistory.unshift({
         time: data.scan_time,
@@ -296,71 +299,120 @@ function updateHistory(data, cisScore) {
 
     scanHistory = scanHistory.slice(0, 10);
     localStorage.setItem("scanHistory", JSON.stringify(scanHistory));
+    loadHistory();
 }
-
-
-
-
 
 function loadHistory() {
     const table = document.getElementById("historyTable");
     table.innerHTML = "";
 
-    scanHistory.forEach(h => {
+    if (!scanHistory.length) {
+        table.innerHTML = `
+            <tr class="empty-state">
+                <td colspan="4">
+                    <span class="empty-title">No scan history yet</span>
+                    Run a scan to start building a recent posture timeline.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    scanHistory.forEach((historyItem) => {
         const row = document.createElement("tr");
         row.innerHTML = `
-            <td>${new Date(h.time).toLocaleString()}</td>
-            <td>${h.score}</td>
-            <td>${h.cis}</td>
-            <td>${h.level}</td>
+            <td>${formatTimestamp(historyItem.time)}</td>
+            <td>${historyItem.score}</td>
+            <td>${historyItem.cis}</td>
+            <td>${escapeHtml(historyItem.level || "-")}</td>
         `;
         table.appendChild(row);
     });
 }
 
-// ================================
-// ANIMATION
-// ================================
 function animateValue(id, end, duration = 800) {
-    let start = 0;
+    const element = document.getElementById(id);
+    const target = Number(end) || 0;
+    const start = Number(element.textContent) || 0;
+    const difference = target - start;
     let startTime = null;
 
-    function animation(currentTime) {
-        if (!startTime) startTime = currentTime;
+    function step(currentTime) {
+        if (!startTime) {
+            startTime = currentTime;
+        }
 
-        const progress = currentTime - startTime;
-        const value = Math.min(
-            Math.floor((progress / duration) * end),
-            end
-        );
+        const progress = Math.min((currentTime - startTime) / duration, 1);
+        const value = Math.round(start + (difference * progress));
+        element.textContent = value;
 
-        document.getElementById(id).innerText = value;
-
-        if (progress < duration) {
-            requestAnimationFrame(animation);
+        if (progress < 1) {
+            requestAnimationFrame(step);
         }
     }
 
-    requestAnimationFrame(animation);
+    requestAnimationFrame(step);
 }
 
+function showRecommendation(text) {
+    if (!text) {
+        return;
+    }
 
+    const modal = document.getElementById("recommendationModal");
+    document.getElementById("modalText").textContent = text;
+    modal.classList.add("show");
+    modal.classList.remove("hidden");
+    modal.setAttribute("aria-hidden", "false");
+}
 
-// Attach click listener ONCE (event delegation)
-document.getElementById("findingsTable").addEventListener("click", function(e) {
-    if (e.target.classList.contains("view-btn")) {
-        const text = decodeURIComponent(e.target.dataset.recommendation);
+function closeModal() {
+    const modal = document.getElementById("recommendationModal");
+    modal.classList.remove("show");
+    modal.classList.add("hidden");
+    modal.setAttribute("aria-hidden", "true");
+}
+
+function formatTimestamp(value) {
+    if (!value) {
+        return "Waiting for data";
+    }
+
+    return new Date(value).toLocaleString();
+}
+
+function escapeHtml(value) {
+    return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+}
+
+function escapeAttribute(value) {
+    return escapeHtml(value).replaceAll("`", "&#96;");
+}
+
+document.getElementById("findingsTable").addEventListener("click", (event) => {
+    if (event.target.classList.contains("view-btn")) {
+        const text = decodeURIComponent(event.target.dataset.recommendation || "");
         showRecommendation(text);
     }
 });
 
-// AUTO REFRESH
-setInterval(loadDashboard, 30000);
-loadDashboard();
-// ================================
-// AUTO REFRESH
-// ================================
+document.getElementById("recommendationModal").addEventListener("click", (event) => {
+    if (event.target.id === "recommendationModal") {
+        closeModal();
+    }
+});
 
+document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+        closeModal();
+    }
+});
 
-setInterval(loadDashboard, 30000);
+loadHistory();
 loadDashboard();
+setInterval(loadDashboard, 30000);
