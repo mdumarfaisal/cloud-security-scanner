@@ -262,7 +262,8 @@ Contributions are welcome.
 
 ## License
 
-Add your preferred license file (for example, MIT) and update this section accordingly.
+This project is licensed under the MIT License.
+See the [LICENSE](LICENSE) file for details.
 
 ## Author
 
