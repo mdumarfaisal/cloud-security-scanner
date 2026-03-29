@@ -1,6 +1,7 @@
 let scanHistory = JSON.parse(localStorage.getItem("scanHistory")) || [];
 let severityChart = null;
 let serviceChart = null;
+let awsCredentials = JSON.parse(sessionStorage.getItem("awsCredentials") || "null");
 
 function showDashboard() {
     toggleSection("dashboard");
@@ -26,11 +27,22 @@ function toggleSection(section) {
 
 async function triggerScan() {
     try {
+        if (!awsCredentials) {
+            alert("Connect AWS credentials before starting a scan.");
+            openAwsModal();
+            return;
+        }
+
         setStatus("Scanning", "loading", true);
 
-        const response = await fetch("/scan", { method: "POST" });
+        const response = await fetch("/scan", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ credentials: awsCredentials })
+        });
         if (!response.ok) {
-            throw new Error("Scan failed");
+            const errorPayload = await response.json().catch(() => ({}));
+            throw new Error(errorPayload.detail || "Scan failed");
         }
 
         const data = await response.json();
@@ -42,7 +54,7 @@ async function triggerScan() {
     } catch (error) {
         console.error(error);
         setStatus("Scan Failed", "error", false);
-        alert("Scan failed. Please try again.");
+        alert(error.message || "Scan failed. Please try again.");
     }
 }
 
@@ -373,6 +385,82 @@ function closeModal() {
     modal.setAttribute("aria-hidden", "true");
 }
 
+function openAwsModal() {
+    const modal = document.getElementById("awsModal");
+    const message = document.getElementById("awsAuthMessage");
+
+    if (awsCredentials) {
+        document.getElementById("awsAccessKeyId").value = awsCredentials.access_key_id || "";
+        document.getElementById("awsSecretAccessKey").value = awsCredentials.secret_access_key || "";
+        document.getElementById("awsSessionToken").value = awsCredentials.session_token || "";
+        document.getElementById("awsDefaultRegion").value = awsCredentials.default_region || "eu-north-1";
+    }
+
+    message.textContent = "";
+    message.className = "aws-auth-message";
+    modal.classList.add("show");
+    modal.classList.remove("hidden");
+    modal.setAttribute("aria-hidden", "false");
+}
+
+function closeAwsModal() {
+    const modal = document.getElementById("awsModal");
+    modal.classList.remove("show");
+    modal.classList.add("hidden");
+    modal.setAttribute("aria-hidden", "true");
+}
+
+function setAwsConnectionStatus(text) {
+    document.getElementById("awsConnectionStatus").textContent = text;
+}
+
+async function saveAwsCredentials(event) {
+    event.preventDefault();
+
+    const payload = {
+        credentials: {
+            access_key_id: document.getElementById("awsAccessKeyId").value.trim(),
+            secret_access_key: document.getElementById("awsSecretAccessKey").value.trim(),
+            session_token: document.getElementById("awsSessionToken").value.trim() || null,
+            default_region: document.getElementById("awsDefaultRegion").value.trim() || "eu-north-1"
+        }
+    };
+
+    const message = document.getElementById("awsAuthMessage");
+    message.textContent = "Validating credentials...";
+    message.className = "aws-auth-message";
+
+    try {
+        const response = await fetch("/auth/aws", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const errorPayload = await response.json().catch(() => ({}));
+            throw new Error(errorPayload.detail || "Authentication failed");
+        }
+
+        const data = await response.json();
+        awsCredentials = payload.credentials;
+        sessionStorage.setItem("awsCredentials", JSON.stringify(awsCredentials));
+
+        message.textContent = `Connected to account ${data.account_id}`;
+        message.className = "aws-auth-message success";
+        setAwsConnectionStatus(`Connected (${data.account_id})`);
+
+        setTimeout(() => {
+            closeAwsModal();
+        }, 500);
+    } catch (error) {
+        console.error(error);
+        message.textContent = error.message || "Authentication failed.";
+        message.className = "aws-auth-message error";
+        setAwsConnectionStatus("Not connected");
+    }
+}
+
 function formatTimestamp(value) {
     if (!value) {
         return "Waiting for data";
@@ -407,11 +495,22 @@ document.getElementById("recommendationModal").addEventListener("click", (event)
     }
 });
 
+document.getElementById("awsModal").addEventListener("click", (event) => {
+    if (event.target.id === "awsModal") {
+        closeAwsModal();
+    }
+});
+
 document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
         closeModal();
+        closeAwsModal();
     }
 });
+
+if (awsCredentials) {
+    setAwsConnectionStatus("Connected");
+}
 
 loadHistory();
 loadDashboard();

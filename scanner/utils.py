@@ -1,13 +1,15 @@
 import boto3
 
-def get_all_regions():
-    ec2 = boto3.client("ec2")
+
+def get_all_regions(session=None):
+    active_session = session or boto3.session.Session()
+    ec2 = active_session.client("ec2")
     response = ec2.describe_regions(AllRegions=False)
     return [region["RegionName"] for region in response["Regions"]]
 
 
 
-def create_finding(service, resource, issue, severity):
+def create_finding(service, resource, issue, severity, region=None):
     recommendations = {
         "User has AdministratorAccess policy":
             "Apply least privilege principle. Remove AdministratorAccess and assign granular IAM roles.",
@@ -34,6 +36,7 @@ def create_finding(service, resource, issue, severity):
         "resource": resource,
         "issue": issue,
         "severity": severity,
+        "region": region,
         "risk_score": severity_score.get(severity, 5),
         "recommendation": recommendations.get(issue, "Review configuration and apply security best practices."),
         "cis_control": "CIS AWS Foundations Benchmark"

@@ -3,9 +3,6 @@ import json
 from botocore.exceptions import ClientError
 from scanner.utils import create_finding
 
-s3 = boto3.client("s3")
-
-
 # def create_finding(service, resource, issue, severity):
 #     return {
 #         "service": service,
@@ -15,8 +12,10 @@ s3 = boto3.client("s3")
 #     }
 
 
-def scan_s3():
+def scan_s3(session=None):
     findings = []
+    active_session = session or boto3.session.Session()
+    s3 = active_session.client("s3")
 
     try:
         buckets = s3.list_buckets()["Buckets"]
