@@ -1,228 +1,169 @@
-☁️ Cloud-Native AWS Security Scanner
+﻿# Cloud Security Scanner
 
-A cloud-native AWS security configuration scanner built using Python, FastAPI, Docker, and Kubernetes.
+Cloud Security Scanner is a FastAPI-based AWS misconfiguration scanner with a built-in web dashboard.
 
-This tool programmatically audits AWS resources (IAM, S3, EC2) for common security misconfigurations and exposes structured findings through a REST API.
+It scans IAM, S3, and EC2 resources, calculates a risk score, and presents findings with severity and remediation guidance.
 
-Designed as a DevSecOps-ready, containerized cloud security project.
+## Features
 
-🚀 Features
-🔍 IAM Security Checks
+- IAM checks
+  - IAM users with `AdministratorAccess`
+  - IAM users without MFA
+- S3 checks
+  - Public bucket policy exposure
+  - Public ACL exposure
+- EC2 checks
+  - Security groups exposing SSH (`22`) to `0.0.0.0/0`
+  - Security groups exposing RDP (`3389`) to `0.0.0.0/0`
+  - Other public ports
+- Dashboard
+  - Severity charts
+  - Findings table with recommendations
+  - Scan history in browser storage
+- UI-based AWS login
+  - Credentials validated via STS
+  - Credentials stored in browser `sessionStorage` (session-only)
 
-Detects users attached to AdministratorAccess
+## Tech Stack
 
-Detects IAM users without MFA enabled
+- Python 3.11
+- FastAPI + Uvicorn
+- Boto3
+- Docker
+- Kubernetes (Minikube)
+- Vanilla HTML/CSS/JS frontend
 
-🪣 S3 Security Checks
+## Project Structure
 
-Detects public bucket policies
-
-Detects public bucket ACLs
-
-🖥 EC2 Security Checks
-
-Detects security groups exposing:
-
-SSH (Port 22) to 0.0.0.0/0
-
-RDP (Port 3389) to 0.0.0.0/0
-
-📊 Severity Classification
-
-Each finding is categorized as:
-
-CRITICAL
-
-HIGH
-
-MEDIUM
-
-Severity summary is dynamically calculated during each scan.
-
-🌐 REST API
-
-Built using FastAPI
-
-Auto-generated Swagger documentation
-
-JSON analytics-ready output
-
-🐳 Cloud-Native Deployment
-
-Dockerized application
-
-Kubernetes deployment (Minikube tested)
-
-Self-healing verified
-
-Service exposure validated
-
-🏗 Architecture
-FastAPI Application
-        ↓
-Docker Container
-        ↓
-Kubernetes Deployment
-        ↓
-Pod
-        ↓
-Service (NodePort / Port-Forward)
-        ↓
-AWS APIs (IAM, S3, EC2 via boto3)
-🛠 Tech Stack
-
-Python 3.11
-
-FastAPI
-
-Uvicorn
-
-Boto3 (AWS SDK)
-
-Docker
-
-Kubernetes (Minikube)
-
-📦 Project Structure
+```text
 cloud-security-scanner/
-│
-├── api/
-│   └── main.py
-│
-├── scanner/
-│   ├── iam_scanner.py
-│   ├── s3_scanner.py
-│   └── ec2_scanner.py
-│
-├── deployment.yaml
-├── service.yaml
-├── Dockerfile
-├── requirements.txt
-└── README.md
-🔧 Local Setup
-1️⃣ Install Dependencies
+|- api/
+|  |- main.py
+|- frontend/
+|  |- index.html
+|  |- script.js
+|  |- style.css
+|- scanner/
+|  |- iam_scanner.py
+|  |- s3_scanner.py
+|  |- ec2_scanner.py
+|  |- compliance.py
+|  |- utils.py
+|- reports/
+|- deployment.yaml
+|- service.yaml
+|- Dockerfile
+|- requirements.txt
+|- README.md
+```
+
+## How It Works
+
+1. User opens dashboard.
+2. User clicks `Connect AWS` and submits credentials.
+3. Backend validates credentials using `STS GetCallerIdentity`.
+4. User runs scan.
+5. Scanner checks IAM/S3/EC2 and returns findings.
+6. Report is saved to `reports/report.json` and rendered in UI.
+
+## API Endpoints
+
+- `GET /`
+  - Serves frontend
+- `POST /auth/aws`
+  - Validates AWS credentials from UI
+- `POST /scan?mode=BASIC|CIS|STRICT`
+  - Runs scan (accepts optional credentials in request body)
+- `GET /report`
+  - Returns latest full report
+- `GET /summary`
+  - Returns summary, score, level, mode, regions
+
+Example scan request body:
+
+```json
+{
+  "credentials": {
+    "access_key_id": "AKIA...",
+    "secret_access_key": "...",
+    "session_token": null,
+    "default_region": "eu-north-1"
+  }
+}
+```
+
+## Local Setup
+
+```powershell
+cd "D:\COLLEGE 25-26\CLOUD\cloud-security-scanner"
 pip install -r requirements.txt
-2️⃣ Configure AWS Credentials
-export AWS_ACCESS_KEY_ID=YOUR_KEY
-export AWS_SECRET_ACCESS_KEY=YOUR_SECRET
-export AWS_DEFAULT_REGION=eu-north-1
-
-Or use:
-
-aws configure
-3️⃣ Run Application
-uvicorn api.main:app --host 0.0.0.0 --port 8000
-
-Access Swagger UI:
-
-http://localhost:8000/docs
-🐳 Docker Setup
-Build Image
-docker build -t aws-scanner:1.0 .
-Run Container
-docker run -p 8000:8000 \
--e AWS_ACCESS_KEY_ID=YOUR_KEY \
--e AWS_SECRET_ACCESS_KEY=YOUR_SECRET \
--e AWS_DEFAULT_REGION=eu-north-1 \
-aws-scanner:1.0
-☸️ Kubernetes Deployment (Minikube)
-Start Minikube
-minikube start
-Load Image
-minikube image load aws-scanner:1.0
-Deploy
-kubectl apply -f deployment.yaml
-kubectl apply -f service.yaml
-Verify
-kubectl get pods
-kubectl get svc
-Access via Port Forward
-kubectl port-forward svc/aws-scanner-service 8000:8000
+uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload
+```
 
 Open:
 
-http://localhost:8000/docs
-🔎 API Endpoints
-GET /
+- Dashboard: `http://localhost:8000/`
+- Swagger: `http://localhost:8000/docs`
 
-Health check endpoint.
+## Docker Setup
 
-GET /scan
+```powershell
+cd "D:\COLLEGE 25-26\CLOUD\cloud-security-scanner"
+docker build -t aws-scanner:1.0 .
+docker run -p 8000:8000 aws-scanner:1.0
+```
 
-Runs full AWS security scan and returns:
+Then use `Connect AWS` in the UI.
 
-{
-  "account_id": "123456789012",
-  "region": "eu-north-1",
-  "summary": {
-    "CRITICAL": 1,
-    "HIGH": 2,
-    "MEDIUM": 0
-  },
-  "findings": [...]
-}
-🔁 Kubernetes Validation
+## Kubernetes Setup (Minikube)
 
-Pod health verified
+Note: Current deployment is UI-auth based, so `aws-credentials` secret is not required.
 
-Logs inspected
+```powershell
+cd "D:\COLLEGE 25-26\CLOUD\cloud-security-scanner"
+minikube start --driver=docker
+minikube -p minikube docker-env --shell powershell | Invoke-Expression
+docker build -t aws-scanner .
+kubectl delete -f deployment.yaml --ignore-not-found
+kubectl delete -f service.yaml --ignore-not-found
+kubectl apply -f deployment.yaml
+kubectl apply -f service.yaml
+kubectl get pods
+kubectl get svc
+minikube service aws-scanner-service --url
+```
 
-API tested inside cluster
+Alternative access:
 
-Manual pod deletion → automatic recreation confirmed
+```powershell
+kubectl port-forward svc/aws-scanner-service 8000:8000
+```
 
-Service exposure validated
+## Verify Self-Healing
 
-Confirms Kubernetes self-healing behavior.
+```powershell
+kubectl get pods
+kubectl delete pod <pod-name>
+kubectl get pods -w
+```
 
-🔐 Security Note
+You should see Kubernetes recreate the pod automatically.
 
-For demonstration, AWS credentials were passed via environment variables.
+## Troubleshooting
 
-In production:
+- If terminal shows `>>`, press `Ctrl + C` to cancel multiline input.
+- If `ImagePullBackOff` appears, make sure image was built in Minikube Docker context:
+  - `minikube -p minikube docker-env --shell powershell | Invoke-Expression`
+  - Rebuild image.
+- If scan fails, reconnect AWS credentials in UI.
 
-Use Kubernetes Secrets
+## Security Notes
 
-Prefer IAM Roles over static access keys
+- Do not commit real AWS keys.
+- Use temporary credentials (STS) when possible.
+- For production, prefer IAM roles (IRSA/EKS role binding) over static keys.
+- Add auth/RBAC before exposing publicly.
 
-Add authentication & RBAC
-
-Enable logging & monitoring
-
-🎯 Learning Outcomes
-
-Cloud-native architecture design
-
-Docker containerization
-
-Kubernetes Deployment & Service configuration
-
-AWS SDK (Boto3) integration
-
-REST API development with FastAPI
-
-DevSecOps fundamentals
-
-Kubernetes self-healing validation
-
-📌 Future Improvements
-
-Add RDS & Lambda scanning
-
-Add authentication layer (JWT)
-
-Add React dashboard
-
-Deploy to AWS EKS
-
-CI/CD integration
-
-Historical scan tracking
-
-Replace static keys with IAM Roles
-
-👨‍💻 Author
+## Author
 
 Md Umar Faisal
-B.Tech – Computer Science and Engineering
-Cloud Computing Project
