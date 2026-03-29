@@ -271,6 +271,16 @@ select:focus-visible,
     border: 1px solid var(--border);
 }
 
+.aws-session {
+    display: grid;
+    gap: 4px;
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.65);
+}
+
 .status-pill {
     display: inline-flex;
     align-items: center;
@@ -726,6 +736,26 @@ td.issue-cell {
     color: var(--text-soft);
     line-height: 1.7;
     white-space: pre-wrap;
+}
+
+.form-grid {
+    display: grid;
+    gap: 12px;
+}
+
+.aws-auth-message {
+    min-height: 20px;
+    margin: 10px 0 0;
+    font-size: 0.88rem;
+    font-weight: 600;
+}
+
+.aws-auth-message.success {
+    color: var(--success);
+}
+
+.aws-auth-message.error {
+    color: var(--danger);
 }
 
 .icon-btn {

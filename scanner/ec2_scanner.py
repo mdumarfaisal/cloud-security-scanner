@@ -14,12 +14,13 @@ from scanner.utils import create_finding
 #     }
 
 
-def scan_ec2():
+def scan_ec2(session=None):
     findings = []
-    regions = get_all_regions()
+    active_session = session or boto3.session.Session()
+    regions = get_all_regions(active_session)
 
     for region in regions:
-        ec2 = boto3.client("ec2", region_name=region)
+        ec2 = active_session.client("ec2", region_name=region)
 
         try:
             security_groups = ec2.describe_security_groups()["SecurityGroups"]

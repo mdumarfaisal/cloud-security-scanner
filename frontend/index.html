@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SecureCloud Platform</title>
-    <link rel="stylesheet" href="/static/style.css?v=20260323-1">
+    <link rel="stylesheet" href="/static/style.css?v=20260329-2">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
@@ -49,6 +49,7 @@
                 </div>
 
                 <div class="hero-actions">
+                    <button class="secondary-btn" type="button" onclick="openAwsModal()">Connect AWS</button>
                     <button class="primary-btn" type="button" onclick="triggerScan()">Run New Scan</button>
                     <div class="hero-status">
                         <span id="statusIndicator" class="status-pill status-live">Live</span>
@@ -56,6 +57,10 @@
                             <span class="status-label">Last scan</span>
                             <strong id="lastScan">Waiting for data</strong>
                         </div>
+                    </div>
+                    <div class="aws-session">
+                        <span class="status-label">AWS session</span>
+                        <strong id="awsConnectionStatus">Not connected</strong>
                     </div>
                 </div>
             </header>
@@ -233,7 +238,49 @@
         </div>
     </div>
 
-    <script src="/static/script.js?v=20260323-1"></script>
+    <div id="awsModal" class="modal hidden" aria-hidden="true">
+        <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="awsModalTitle">
+            <form id="awsCredentialForm" onsubmit="saveAwsCredentials(event)">
+                <div class="modal-header">
+                    <div>
+                        <p class="eyebrow">Authentication</p>
+                        <h3 id="awsModalTitle">Connect AWS Credentials</h3>
+                    </div>
+                    <button class="icon-btn close-btn" type="button" onclick="closeAwsModal()" aria-label="Close AWS credential modal">
+                        x
+                    </button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="form-grid">
+                        <label class="filter-field">
+                            <span>AWS Access Key ID</span>
+                            <input id="awsAccessKeyId" type="text" autocomplete="off" required>
+                        </label>
+                        <label class="filter-field">
+                            <span>AWS Secret Access Key</span>
+                            <input id="awsSecretAccessKey" type="password" autocomplete="off" required>
+                        </label>
+                        <label class="filter-field">
+                            <span>AWS Session Token (optional)</span>
+                            <input id="awsSessionToken" type="password" autocomplete="off">
+                        </label>
+                        <label class="filter-field">
+                            <span>Default Region</span>
+                            <input id="awsDefaultRegion" type="text" value="eu-north-1" required>
+                        </label>
+                    </div>
+                    <p id="awsAuthMessage" class="aws-auth-message"></p>
+                </div>
+                <div class="modal-footer">
+                    <button class="secondary-btn" type="button" onclick="closeAwsModal()">Cancel</button>
+                    <button class="primary-btn" type="submit">Validate & Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/script.js?v=20260329-2"></script>
 </body>
 
 </html>
