@@ -3,9 +3,6 @@ from botocore.exceptions import ClientError
 from scanner.utils import create_finding
 
 
-iam = boto3.client("iam")
-
-
 # def create_finding(service, resource, issue, severity):
 #     return {
 #         "service": service,
@@ -15,8 +12,10 @@ iam = boto3.client("iam")
 #     }
 
 
-def scan_iam():
+def scan_iam(session=None):
     findings = []
+    active_session = session or boto3.session.Session()
+    iam = active_session.client("iam")
 
     try:
         paginator = iam.get_paginator("list_users")

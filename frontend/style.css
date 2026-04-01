@@ -47,7 +47,8 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
     font: inherit;
 }
 
@@ -269,6 +270,16 @@ select:focus-visible,
     border-radius: 18px;
     background: var(--surface-strong);
     border: 1px solid var(--border);
+}
+
+.cloud-session {
+    display: grid;
+    gap: 4px;
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.65);
 }
 
 .status-pill {
@@ -513,13 +524,20 @@ select:focus-visible,
 }
 
 select,
-input {
+input,
+textarea {
     min-width: 160px;
     padding: 11px 13px;
     border-radius: 12px;
     border: 1px solid var(--border-strong);
     background: rgba(255, 255, 255, 0.92);
     color: var(--text);
+}
+
+textarea {
+    resize: vertical;
+    min-height: 180px;
+    line-height: 1.45;
 }
 
 .table-shell {
@@ -708,6 +726,13 @@ td.issue-cell {
     animation: rise-in 0.2s ease;
 }
 
+.cloud-modal-card {
+    width: min(760px, 100%);
+    max-height: calc(100vh - 40px);
+    overflow: auto;
+    border: 1px solid var(--border);
+}
+
 .modal-header,
 .modal-footer {
     display: flex;
@@ -726,6 +751,49 @@ td.issue-cell {
     color: var(--text-soft);
     line-height: 1.7;
     white-space: pre-wrap;
+}
+
+.form-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.span-2 {
+    grid-column: 1 / -1;
+}
+
+.provider-section {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.65);
+}
+
+.provider-note {
+    margin-top: 4px;
+    padding: 10px 12px;
+    border: 1px dashed var(--border-strong);
+    border-radius: 10px;
+    background: var(--surface-muted);
+}
+
+.cloud-auth-message {
+    min-height: 20px;
+    margin: 10px 0 0;
+    font-size: 0.88rem;
+    font-weight: 600;
+}
+
+.cloud-auth-message.success {
+    color: var(--success);
+}
+
+.cloud-auth-message.error {
+    color: var(--danger);
 }
 
 .icon-btn {
@@ -824,9 +892,19 @@ td.issue-cell {
     .filter-search,
     .filter-field,
     .filter-field select,
-    .filter-field input {
+    .filter-field input,
+    .filter-field textarea {
         min-width: 0;
         width: 100%;
+    }
+
+    .form-grid,
+    .provider-section {
+        grid-template-columns: 1fr;
+    }
+
+    .span-2 {
+        grid-column: auto;
     }
 
     .footer {

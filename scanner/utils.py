@@ -1,13 +1,15 @@
 import boto3
 
-def get_all_regions():
-    ec2 = boto3.client("ec2")
+
+def get_all_regions(session=None):
+    active_session = session or boto3.session.Session()
+    ec2 = active_session.client("ec2")
     response = ec2.describe_regions(AllRegions=False)
     return [region["RegionName"] for region in response["Regions"]]
 
 
 
-def create_finding(service, resource, issue, severity):
+def create_finding(service, resource, issue, severity, region=None, provider="AWS"):
     recommendations = {
         "User has AdministratorAccess policy":
             "Apply least privilege principle. Remove AdministratorAccess and assign granular IAM roles.",
@@ -20,7 +22,15 @@ def create_finding(service, resource, issue, severity):
         "Port 22 open to 0.0.0.0/0":
             "Restrict SSH access to specific IP addresses instead of 0.0.0.0/0.",
         "Port 3389 open to 0.0.0.0/0":
-            "Restrict RDP access to trusted IP ranges only."
+            "Restrict RDP access to trusted IP ranges only.",
+        "Public inbound rule detected":
+            "Restrict inbound access to trusted CIDRs and minimum required ports only.",
+        "Storage account allows blob public access":
+            "Disable public blob access and use private endpoints or scoped identities.",
+        "Public ingress firewall rule detected":
+            "Limit ingress ranges and exposed ports to trusted networks only.",
+        "Bucket has public IAM binding":
+            "Remove public IAM members (allUsers/allAuthenticatedUsers) and apply least privilege."
     }
 
     severity_score = {
@@ -30,10 +40,12 @@ def create_finding(service, resource, issue, severity):
     }
 
     return {
+        "provider": provider,
         "service": service,
         "resource": resource,
         "issue": issue,
         "severity": severity,
+        "region": region,
         "risk_score": severity_score.get(severity, 5),
         "recommendation": recommendations.get(issue, "Review configuration and apply security best practices."),
         "cis_control": "CIS AWS Foundations Benchmark"

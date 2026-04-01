@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SecureCloud Platform</title>
-    <link rel="stylesheet" href="/static/style.css?v=20260323-1">
+    <link rel="stylesheet" href="/static/style.css?v=20260329-3">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
@@ -41,7 +41,7 @@
         <main class="content">
             <header class="hero">
                 <div class="hero-copy">
-                    <p class="eyebrow">AWS Security Posture</p>
+                    <p class="eyebrow">Multi-Cloud Security Posture</p>
                     <h2>See risk fast, then act on the findings that matter most.</h2>
                     <p class="hero-text">
                         Run a fresh scan, review severity trends, and inspect service-level findings without losing context.
@@ -49,6 +49,7 @@
                 </div>
 
                 <div class="hero-actions">
+                    <button class="secondary-btn" type="button" onclick="openCloudModal()">Connect Cloud</button>
                     <button class="primary-btn" type="button" onclick="triggerScan()">Run New Scan</button>
                     <div class="hero-status">
                         <span id="statusIndicator" class="status-pill status-live">Live</span>
@@ -56,6 +57,10 @@
                             <span class="status-label">Last scan</span>
                             <strong id="lastScan">Waiting for data</strong>
                         </div>
+                    </div>
+                    <div class="cloud-session">
+                        <span class="status-label">Cloud session</span>
+                        <strong id="cloudConnectionStatus">Not connected</strong>
                     </div>
                 </div>
             </header>
@@ -67,7 +72,7 @@
 
             <div id="loader" class="loader hidden" role="status" aria-live="polite">
                 <span class="loader-dot"></span>
-                Scanning AWS resources and updating the dashboard...
+                Scanning cloud resources and updating the dashboard...
             </div>
 
             <section id="dashboardSection">
@@ -233,7 +238,90 @@
         </div>
     </div>
 
-    <script src="/static/script.js?v=20260323-1"></script>
+    <div id="cloudModal" class="modal hidden" aria-hidden="true">
+        <div class="modal-content cloud-modal-card" role="dialog" aria-modal="true" aria-labelledby="cloudModalTitle">
+            <form id="cloudCredentialForm" onsubmit="saveCloudCredentials(event)">
+                <div class="modal-header">
+                    <div>
+                        <p class="eyebrow">Authentication</p>
+                        <h3 id="cloudModalTitle">Connect Cloud Account</h3>
+                    </div>
+                    <button class="icon-btn close-btn" type="button" onclick="closeCloudModal()" aria-label="Close cloud credential modal">
+                        x
+                    </button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="form-grid">
+                        <label class="filter-field span-2">
+                            <span>Cloud Provider</span>
+                            <select id="cloudProvider" onchange="handleProviderChange()">
+                                <option value="AWS">AWS</option>
+                                <option value="AZURE">Azure</option>
+                                <option value="GCP">GCP</option>
+                            </select>
+                        </label>
+
+                        <div id="awsFields" class="provider-section span-2">
+                            <label class="filter-field">
+                                <span>AWS Access Key ID</span>
+                                <input id="awsAccessKeyId" type="text" autocomplete="off">
+                            </label>
+                            <label class="filter-field">
+                                <span>AWS Secret Access Key</span>
+                                <input id="awsSecretAccessKey" type="password" autocomplete="off">
+                            </label>
+                            <label class="filter-field span-2">
+                                <span>AWS Session Token (optional)</span>
+                                <input id="awsSessionToken" type="password" autocomplete="off">
+                            </label>
+                            <label class="filter-field">
+                                <span>Default Region</span>
+                                <input id="awsDefaultRegion" type="text" value="eu-north-1">
+                            </label>
+                        </div>
+
+                        <div id="azureFields" class="hidden provider-section span-2">
+                            <label class="filter-field">
+                                <span>Azure Tenant ID</span>
+                                <input id="azureTenantId" type="text" autocomplete="off">
+                            </label>
+                            <label class="filter-field">
+                                <span>Azure Client ID</span>
+                                <input id="azureClientId" type="text" autocomplete="off">
+                            </label>
+                            <label class="filter-field">
+                                <span>Azure Client Secret</span>
+                                <input id="azureClientSecret" type="password" autocomplete="off">
+                            </label>
+                            <label class="filter-field">
+                                <span>Azure Subscription ID</span>
+                                <input id="azureSubscriptionId" type="text" autocomplete="off">
+                            </label>
+                        </div>
+
+                        <div id="gcpFields" class="hidden provider-section span-2">
+                            <label class="filter-field">
+                                <span>GCP Project ID</span>
+                                <input id="gcpProjectId" type="text" autocomplete="off">
+                            </label>
+                            <label class="filter-field span-2">
+                                <span>Service Account JSON</span>
+                                <textarea id="gcpServiceAccountJson" rows="7" placeholder='{"type":"service_account", ...}'></textarea>
+                            </label>
+                        </div>
+                    </div>
+                    <p id="cloudAuthMessage" class="cloud-auth-message"></p>
+                </div>
+                <div class="modal-footer">
+                    <button class="secondary-btn" type="button" onclick="closeCloudModal()">Cancel</button>
+                    <button class="primary-btn" type="submit">Validate & Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/script.js?v=20260329-3"></script>
 </body>
 
 </html>

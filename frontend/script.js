@@ -1,6 +1,7 @@
 let scanHistory = JSON.parse(localStorage.getItem("scanHistory")) || [];
 let severityChart = null;
 let serviceChart = null;
+let cloudCredentials = JSON.parse(sessionStorage.getItem("cloudCredentials") || "null");
 
 function showDashboard() {
     toggleSection("dashboard");
@@ -26,11 +27,23 @@ function toggleSection(section) {
 
 async function triggerScan() {
     try {
+        if (!cloudCredentials) {
+            alert("Connect a cloud account before starting a scan.");
+            openCloudModal();
+            return;
+        }
+
         setStatus("Scanning", "loading", true);
 
-        const response = await fetch("/scan", { method: "POST" });
+        const response = await fetch("/scan", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ credentials: cloudCredentials })
+        });
+
         if (!response.ok) {
-            throw new Error("Scan failed");
+            const errorPayload = await response.json().catch(() => ({}));
+            throw new Error(errorPayload.detail || "Scan failed");
         }
 
         const data = await response.json();
@@ -42,7 +55,7 @@ async function triggerScan() {
     } catch (error) {
         console.error(error);
         setStatus("Scan Failed", "error", false);
-        alert("Scan failed. Please try again.");
+        alert(error.message || "Scan failed. Please try again.");
     }
 }
 
@@ -56,11 +69,7 @@ function setStatus(text, variant, loading) {
 }
 
 function calculateCISScore(summary) {
-    const penalty =
-        (summary.CRITICAL * 10) +
-        (summary.HIGH * 6) +
-        (summary.MEDIUM * 3);
-
+    const penalty = (summary.CRITICAL * 10) + (summary.HIGH * 6) + (summary.MEDIUM * 3);
     return Math.max(0, 100 - penalty);
 }
 
@@ -126,11 +135,7 @@ function updateCharts(data) {
         data: {
             labels: ["Critical", "High", "Medium"],
             datasets: [{
-                data: [
-                    data.summary.CRITICAL,
-                    data.summary.HIGH,
-                    data.summary.MEDIUM
-                ],
+                data: [data.summary.CRITICAL, data.summary.HIGH, data.summary.MEDIUM],
                 backgroundColor: ["#d84b53", "#d97a18", "#3c78d8"],
                 borderWidth: 0,
                 hoverOffset: 6
@@ -142,11 +147,7 @@ function updateCharts(data) {
             plugins: {
                 legend: {
                     position: "bottom",
-                    labels: {
-                        usePointStyle: true,
-                        boxWidth: 10,
-                        padding: 18
-                    }
+                    labels: { usePointStyle: true, boxWidth: 10, padding: 18 }
                 }
             }
         }
@@ -154,7 +155,7 @@ function updateCharts(data) {
 
     const serviceCounts = {};
     data.findings.forEach((finding) => {
-        const key = finding.service || "Unknown";
+        const key = `${finding.provider || ""} ${finding.service || "Unknown"}`.trim();
         serviceCounts[key] = (serviceCounts[key] || 0) + 1;
     });
 
@@ -176,19 +177,10 @@ function updateCharts(data) {
         options: {
             responsive: true,
             scales: {
-                x: {
-                    grid: { display: false }
-                },
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        precision: 0
-                    }
-                }
+                x: { grid: { display: false } },
+                y: { beginAtZero: true, ticks: { precision: 0 } }
             },
-            plugins: {
-                legend: { display: false }
-            }
+            plugins: { legend: { display: false } }
         }
     });
 }
@@ -198,17 +190,14 @@ function updateCISBreakdown(summary) {
     container.innerHTML = "";
 
     const controls = [
-        { name: "S3 Exposure", issues: summary.CRITICAL, weight: 12 },
-        { name: "IAM Hygiene", issues: summary.HIGH, weight: 9 },
-        { name: "EC2 Hardening", issues: summary.MEDIUM, weight: 6 }
+        { name: "Critical Findings", issues: summary.CRITICAL, weight: 12 },
+        { name: "High Findings", issues: summary.HIGH, weight: 9 },
+        { name: "Medium Findings", issues: summary.MEDIUM, weight: 6 }
     ];
 
     controls.forEach((control) => {
         const score = Math.max(0, 100 - (control.issues * control.weight));
-        const tone =
-            score >= 80 ? "#1e9e69" :
-            score >= 55 ? "#d97a18" :
-                "#d84b53";
+        const tone = score >= 80 ? "#1e9e69" : score >= 55 ? "#d97a18" : "#d84b53";
 
         const wrapper = document.createElement("div");
         wrapper.className = "progress-wrapper";
@@ -224,7 +213,6 @@ function updateCISBreakdown(summary) {
                 <div class="progress-fill" style="width:${score}%; background:${tone};"></div>
             </div>
         `;
-
         container.appendChild(wrapper);
     });
 }
@@ -238,7 +226,7 @@ function populateTable(data) {
 
     const filtered = data.findings.filter((finding) => {
         const matchesSeverity = !severityFilter || finding.severity === severityFilter;
-        const haystack = `${finding.resource || ""} ${finding.issue || ""} ${finding.service || ""}`.toLowerCase();
+        const haystack = `${finding.provider || ""} ${finding.resource || ""} ${finding.issue || ""} ${finding.service || ""}`.toLowerCase();
         const matchesSearch = !searchText || haystack.includes(searchText);
         return matchesSeverity && matchesSearch;
     });
@@ -262,13 +250,12 @@ function populateTable(data) {
             if (severityDiff !== 0) {
                 return severityDiff;
             }
-
-            return (a.service || "").localeCompare(b.service || "");
+            return `${a.provider || ""} ${a.service || ""}`.localeCompare(`${b.provider || ""} ${b.service || ""}`);
         })
         .forEach((finding) => {
             const row = document.createElement("tr");
             row.innerHTML = `
-                <td>${escapeHtml(finding.service || "-")}</td>
+                <td>${escapeHtml(`${finding.provider || ""} ${finding.service || "-"}`.trim())}</td>
                 <td class="resource-cell"><span class="truncate" title="${escapeAttribute(finding.resource || "-")}">${escapeHtml(finding.resource || "-")}</span></td>
                 <td class="issue-cell"><span class="truncate" title="${escapeAttribute(finding.issue || "-")}">${escapeHtml(finding.issue || "-")}</span></td>
                 <td>${getSeverityBadge(finding.severity)}</td>
@@ -279,7 +266,6 @@ function populateTable(data) {
                     </button>
                 </td>
             `;
-
             table.appendChild(row);
         });
 }
@@ -294,7 +280,8 @@ function updateHistory(data, cisScore) {
         time: data.scan_time,
         score: data.risk_score,
         cis: cisScore,
-        level: data.security_level
+        level: data.security_level,
+        provider: data.provider || "AWS"
     });
 
     scanHistory = scanHistory.slice(0, 10);
@@ -321,7 +308,7 @@ function loadHistory() {
     scanHistory.forEach((historyItem) => {
         const row = document.createElement("tr");
         row.innerHTML = `
-            <td>${formatTimestamp(historyItem.time)}</td>
+            <td>${formatTimestamp(historyItem.time)} (${escapeHtml(historyItem.provider || "AWS")})</td>
             <td>${historyItem.score}</td>
             <td>${historyItem.cis}</td>
             <td>${escapeHtml(historyItem.level || "-")}</td>
@@ -343,14 +330,12 @@ function animateValue(id, end, duration = 800) {
         }
 
         const progress = Math.min((currentTime - startTime) / duration, 1);
-        const value = Math.round(start + (difference * progress));
-        element.textContent = value;
+        element.textContent = Math.round(start + (difference * progress));
 
         if (progress < 1) {
             requestAnimationFrame(step);
         }
     }
-
     requestAnimationFrame(step);
 }
 
@@ -373,11 +358,126 @@ function closeModal() {
     modal.setAttribute("aria-hidden", "true");
 }
 
+function handleProviderChange() {
+    const provider = document.getElementById("cloudProvider").value;
+    document.getElementById("awsFields").classList.toggle("hidden", provider !== "AWS");
+    document.getElementById("azureFields").classList.toggle("hidden", provider !== "AZURE");
+    document.getElementById("gcpFields").classList.toggle("hidden", provider !== "GCP");
+}
+
+function openCloudModal() {
+    const modal = document.getElementById("cloudModal");
+    const message = document.getElementById("cloudAuthMessage");
+
+    if (cloudCredentials) {
+        document.getElementById("cloudProvider").value = cloudCredentials.provider || "AWS";
+        document.getElementById("awsAccessKeyId").value = cloudCredentials.access_key_id || "";
+        document.getElementById("awsSecretAccessKey").value = cloudCredentials.secret_access_key || "";
+        document.getElementById("awsSessionToken").value = cloudCredentials.session_token || "";
+        document.getElementById("awsDefaultRegion").value = cloudCredentials.default_region || "eu-north-1";
+        document.getElementById("azureTenantId").value = cloudCredentials.tenant_id || "";
+        document.getElementById("azureClientId").value = cloudCredentials.client_id || "";
+        document.getElementById("azureClientSecret").value = cloudCredentials.client_secret || "";
+        document.getElementById("azureSubscriptionId").value = cloudCredentials.subscription_id || "";
+        document.getElementById("gcpProjectId").value = cloudCredentials.project_id || "";
+        document.getElementById("gcpServiceAccountJson").value = cloudCredentials.service_account_json || "";
+    }
+
+    handleProviderChange();
+    message.textContent = "";
+    message.className = "cloud-auth-message";
+    modal.classList.add("show");
+    modal.classList.remove("hidden");
+    modal.setAttribute("aria-hidden", "false");
+}
+
+function closeCloudModal() {
+    const modal = document.getElementById("cloudModal");
+    modal.classList.remove("show");
+    modal.classList.add("hidden");
+    modal.setAttribute("aria-hidden", "true");
+}
+
+function setCloudConnectionStatus(text) {
+    document.getElementById("cloudConnectionStatus").textContent = text;
+}
+
+async function saveCloudCredentials(event) {
+    event.preventDefault();
+
+    const provider = document.getElementById("cloudProvider").value;
+    const message = document.getElementById("cloudAuthMessage");
+
+    const payload = {
+        credentials: {
+            provider,
+            access_key_id: document.getElementById("awsAccessKeyId").value.trim() || null,
+            secret_access_key: document.getElementById("awsSecretAccessKey").value.trim() || null,
+            session_token: document.getElementById("awsSessionToken").value.trim() || null,
+            default_region: document.getElementById("awsDefaultRegion").value.trim() || "eu-north-1",
+            tenant_id: document.getElementById("azureTenantId").value.trim() || null,
+            client_id: document.getElementById("azureClientId").value.trim() || null,
+            client_secret: document.getElementById("azureClientSecret").value.trim() || null,
+            subscription_id: document.getElementById("azureSubscriptionId").value.trim() || null,
+            project_id: document.getElementById("gcpProjectId").value.trim() || null,
+            service_account_json: document.getElementById("gcpServiceAccountJson").value.trim() || null
+        }
+    };
+
+    if (provider === "AWS" && (!payload.credentials.access_key_id || !payload.credentials.secret_access_key)) {
+        message.textContent = "AWS access key and secret key are required.";
+        message.className = "cloud-auth-message error";
+        return;
+    }
+    if (provider === "AZURE" && (!payload.credentials.tenant_id || !payload.credentials.client_id || !payload.credentials.client_secret || !payload.credentials.subscription_id)) {
+        message.textContent = "Azure tenant ID, client ID, client secret, and subscription ID are required.";
+        message.className = "cloud-auth-message error";
+        return;
+    }
+    if (provider === "GCP" && (!payload.credentials.project_id || !payload.credentials.service_account_json)) {
+        message.textContent = "GCP project ID and service account JSON are required.";
+        message.className = "cloud-auth-message error";
+        return;
+    }
+
+    message.textContent = "Validating credentials...";
+    message.className = "cloud-auth-message";
+
+    try {
+        const response = await fetch("/auth/cloud", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const errorPayload = await response.json().catch(() => ({}));
+            throw new Error(errorPayload.detail || "Authentication failed");
+        }
+
+        const data = await response.json();
+        cloudCredentials = payload.credentials;
+        sessionStorage.setItem("cloudCredentials", JSON.stringify(cloudCredentials));
+
+        message.textContent = `Connected to ${provider} account ${data.account_id || "-"}`;
+        setCloudConnectionStatus(`Connected (${provider})`);
+        message.className = "cloud-auth-message success";
+
+        setTimeout(() => {
+            closeCloudModal();
+        }, 600);
+    } catch (error) {
+        console.error(error);
+        message.textContent = error.message || "Authentication failed.";
+        message.className = "cloud-auth-message error";
+        setCloudConnectionStatus("Not connected");
+    }
+}
+
 function formatTimestamp(value) {
     if (!value) {
         return "Waiting for data";
     }
-
     return new Date(value).toLocaleString();
 }
 
@@ -407,11 +507,22 @@ document.getElementById("recommendationModal").addEventListener("click", (event)
     }
 });
 
+document.getElementById("cloudModal").addEventListener("click", (event) => {
+    if (event.target.id === "cloudModal") {
+        closeCloudModal();
+    }
+});
+
 document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
         closeModal();
+        closeCloudModal();
     }
 });
+
+if (cloudCredentials?.provider) {
+    setCloudConnectionStatus(`Connected (${cloudCredentials.provider})`);
+}
 
 loadHistory();
 loadDashboard();
