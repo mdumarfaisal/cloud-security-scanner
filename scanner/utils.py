@@ -9,7 +9,7 @@ def get_all_regions(session=None):
 
 
 
-def create_finding(service, resource, issue, severity, region=None):
+def create_finding(service, resource, issue, severity, region=None, provider="AWS"):
     recommendations = {
         "User has AdministratorAccess policy":
             "Apply least privilege principle. Remove AdministratorAccess and assign granular IAM roles.",
@@ -22,7 +22,15 @@ def create_finding(service, resource, issue, severity, region=None):
         "Port 22 open to 0.0.0.0/0":
             "Restrict SSH access to specific IP addresses instead of 0.0.0.0/0.",
         "Port 3389 open to 0.0.0.0/0":
-            "Restrict RDP access to trusted IP ranges only."
+            "Restrict RDP access to trusted IP ranges only.",
+        "Public inbound rule detected":
+            "Restrict inbound access to trusted CIDRs and minimum required ports only.",
+        "Storage account allows blob public access":
+            "Disable public blob access and use private endpoints or scoped identities.",
+        "Public ingress firewall rule detected":
+            "Limit ingress ranges and exposed ports to trusted networks only.",
+        "Bucket has public IAM binding":
+            "Remove public IAM members (allUsers/allAuthenticatedUsers) and apply least privilege."
     }
 
     severity_score = {
@@ -32,6 +40,7 @@ def create_finding(service, resource, issue, severity, region=None):
     }
 
     return {
+        "provider": provider,
         "service": service,
         "resource": resource,
         "issue": issue,
