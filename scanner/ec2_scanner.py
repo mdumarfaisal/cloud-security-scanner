@@ -12,6 +12,7 @@ from scanner.utils import create_finding
 #         "severity": severity,
 #         "region": region
 #     }
+# 
 
 
 def scan_ec2(session=None):
